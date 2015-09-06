@@ -1,6 +1,7 @@
 """Searches wikipedia and returns first sentence of article
 Scaevolus 2009"""
 
+import wikipedia #gh/goldsmith/Wikipedia
 import re
 import requests
 from lxml import etree
@@ -17,6 +18,23 @@ random_url = api_prefix + "?action=query&format=xml&list=random&rnlimit=1&rnname
 
 paren_re = re.compile('\s*\(.*\)$')
 
+wikipedia_re = re.compile('((?<=(?:en\.wikipedia\.org/wiki/))\w+)(#\w+)?') #Matches en-Wikipedia URL
+
+def get_page_summary(pagename):
+    x = wikipedia_re.search(pagename)
+    page = wikipedia.WikipediaPage(title=x.group(0))
+
+    if x.group(2):
+        section_sentence = re.compile('\w+\s+[^.!?]*[.!?]') #Matches first sentence in section, if section is in url
+        section_text = section_sentence.match(page.section(x.group(2)[1:]))
+        out = 'Section \x02' + x.group(2)[1:] + '\x02 from \x02' + x.group(1) + '\x02 :: ' + section_text.group(0) + '...'
+    else:
+        out = '\x02' + x.group(1) + "\x02 :: " + wikipedia.summary(title=x.group(1), chars=130) #Gives out summary if no section is given
+    return out
+
+@hook.regex(wikipedia_re) #I *think* this should work
+def wikipedia_url(match):
+    return get_page_summary(match.group(1))
 
 @hook.command("wiki", "wikipedia", "w")
 def wiki(text):
