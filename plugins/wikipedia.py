@@ -33,13 +33,11 @@ def find_section(page, title):
         res = title
     return page.section(res)
 
-def get_page_summary(pagename):
+def get_page_summary(x):
     """Finds a summary for the article or section linked, up to the first period, exclamation mark or question mark"""
     
-    x = wikipedia_re.search(pagename) # Finds the pagename inside the link
-
     try:
-        page = wikipedia.WikipediaPage(title=urllib.url2pathname(x.group(1))) # Attempts to find the page in Wikipedia
+        page = wikipedia.WikipediaPage(title=urllib.request.url2pathname(x.group(1))) # Attempts to find the page in Wikipedia
     except wikipedia.exceptions.DisambiguationError as e:
         page = wikipedia.WikipediaPage(title=e.options[1]) # Chooses the first option if it's a disambiguation
     except wikipedia.exceptions.PageError:
@@ -60,7 +58,7 @@ def get_page_summary(pagename):
 
 @hook.regex(wikipedia_re) #I believe this works
 def wikipedia_url(match):
-    return get_page_summary(match.group(1))
+    return get_page_summary(match)
 
 @hook.command("wiki", "wikipedia", "w")
 def wiki(text):
