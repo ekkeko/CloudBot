@@ -5,7 +5,6 @@ from plugins import grab
 
 db_ready = []
 
-
 def db_init(db, conn_name):
     """Check to see if the DB has the herald table. Connection name is for caching the result per connection.
     :type db: sqlalchemy.orm.Session
@@ -19,7 +18,41 @@ def db_init(db, conn_name):
 
 
 @hook.command()
-def herald(text, nick, chan, db, conn):
+def herald(text,nick,chan,db,conn):
+    #check if is logged in
+    nickserv = conn.config.get('nickserv')
+    nickserv_name = nickserv.get('nickserv_name', 'nickserv')
+    
+    conn.memory['expecting_reply'] = True
+    conn.memory['text'] = text
+    conn.memory['nick'] = nick
+    conn.memory['chan'] = chan
+
+    conn.message(nickserv_name,'status ' + nick)
+    
+@hook.irc_raw('NOTICE')
+def get_status_reply(nick,content,db,conn):
+    if set(['expecting_reply','text','nick','chan']).issubset(conn.memory.keys()):
+        expecting_reply = conn.memory['expecting_reply']
+        text = conn.memory['text']
+        _nick = conn.memory['nick']
+        chan = conn.memory['chan']
+    else:
+        return
+    if not expecting_reply:
+        return
+    else:
+        conn.memory['expecting_reply'] = False
+    nickserv = conn.config.get('nickserv')
+    nickserv_name = nickserv.get('nickserv_name', 'nickserv')
+    if nick.lower() == nickserv_name and 'STATUS' in content:
+        if content.split(' ')[2] == '3':
+            conn.message(chan,do_herald(text,_nick,chan,db,conn))
+        else:
+            conn.message(chan,_nick+', your nickname is not authenticated')
+    
+
+def do_herald(text, nick, chan, db, conn):
     """herald [message] adds a greeting for your nick that will be announced everytime you join the channel. Using .herald show will show your current herald and .herald delete will remove your greeting."""
 
     db_init(db, conn.name)
@@ -42,6 +75,7 @@ def herald(text, nick, chan, db, conn):
                    'name': nick.lower(), 'chan': chan, 'quote': text})
         db.commit()
         return("greeting successfully added")
+    
 
 
 @hook.irc_raw("JOIN", singlethread=True)
