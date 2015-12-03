@@ -100,7 +100,11 @@ def lastfm(text, nick, db, bot, notice):
     title = track["name"]
     album = track["album"]["#text"]
     artist = track["artist"]["#text"]
-    url = web.try_shorten(track["url"])
+    try:
+        url = web.try_shorten(track["url"])
+    except:
+        url = track["url"]
+        pass
     tags = getartisttags(artist, bot)
     playcount = getusertrackplaycount(artist, title, user, bot)
 
@@ -140,7 +144,10 @@ def getartisttags(artist, bot):
     if 'tag' in tags['toptags']:
         for item in tags['toptags']['tag']:
             try:
-                tag_list.append(item['name'])
+                if not item['name'] == "seen live":
+                    tag_list.append(item['name'])
+                else:
+                    pass
             except KeyError:
                 pass
 
