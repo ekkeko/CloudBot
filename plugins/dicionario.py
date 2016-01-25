@@ -42,10 +42,7 @@ def dicionario(text):
         if definitions:
             try:
                 definition = definitions[id_num - 1]
-                def_text = definition.strip()
-                def_text = re.sub("<strong>|</strong>","\x02", def_text)
-                def_text = re.sub("<br />|<br>"," ", def_text)
-                def_text = formatting.truncate(def_text, 380)
+                def_text = sanitize(definition)
             except IndexError:
                 return 'Não encontrado.'
 
@@ -56,3 +53,14 @@ def dicionario(text):
             output = 'Não achei nada com o termo \x02' + text + '\x02.'
 
         return output
+
+
+def sanitize(definition):
+    def_text = re.sub("<strong>|</strong>","\x02", definition)
+    def_text = re.sub("<br />|<br>"," ", def_text)
+    l = def_text.splitlines()
+    n = [item.strip() for item in l]
+    def_text = " ".join(n).strip()
+    def_text = formatting.truncate(def_text, 380)
+
+    return def_text
