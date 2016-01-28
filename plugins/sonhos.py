@@ -57,6 +57,8 @@ def sonhos(text):
 def sanitize(definition):
     def_text = re.sub("<strong>|</strong>","\x02", definition)
     def_text = re.sub("<br />|<br>"," ", def_text)
+    def_text = re.sub("<.*?>"," ", def_text)
+    def_text = re.sub("\s+"," ", def_text)
     l = def_text.splitlines()
     n = [item.strip() for item in l]
     def_text = " ".join(n).strip()
