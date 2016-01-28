@@ -6,9 +6,6 @@ from cloudbot import hook
 from cloudbot.util import web, formatting
 from urllib.parse import quote
 
-# TODO
-# * find an easy way to erase all html tags from definition
-
 
 @hook.command("dicionario")
 def dicionario(text):
@@ -58,6 +55,8 @@ def dicionario(text):
 def sanitize(definition):
     def_text = re.sub("<strong>|</strong>","\x02", definition)
     def_text = re.sub("<br />|<br>"," ", def_text)
+    def_text = re.sub("<.*?>"," ", def_text)
+    def_text = re.sub("\s+"," ", def_text)
     l = def_text.splitlines()
     n = [item.strip() for item in l]
     def_text = " ".join(n).strip()
