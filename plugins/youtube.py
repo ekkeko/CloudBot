@@ -3,6 +3,7 @@ import time
 
 import isodate
 import requests
+import random
 
 from cloudbot import hook
 from cloudbot.util import timeformat
@@ -170,3 +171,25 @@ def ytplaylist_url(match):
     num_videos = int(content_details['itemCount'])
     count_videos = ' - \x02{:,}\x02 video{}'.format(num_videos, "s"[num_videos == 1:])
     return "\x02{}\x02 {} - \x02{}\x02".format(title, count_videos, author)
+
+@hook.command("tocaraul")
+def tocaraul(bot):
+    songlist = ['tente outra vez', 'metamorfose ambulante', 'maluco beleza', 'gita', 'ouro de tolo', 'meu amigo pedro', 'medo da chuva', 'vampiro doidão', 'prelúdio', 'eu nasci há dez mil anos atrás', 'cowboy fora da lei', 'canto para a minha morte', 'a maçã', 'sociedade alternativa', 'o trem das 7', 'eu também vou reclamar', 'capim guiné', 'carimbador maluco', 'disco voador', 'tu és o mdc da minha vida']
+    """youtube <query> -- Returns the first YouTube search result for <query>."""
+    if not dev_key:
+        return "This command requires a Google Developers Console API key."
+
+    json = requests.get(search_api_url, params={"q": 'raul seixas ' + random.choice(songlist) , "key": dev_key, "type": "video"}).json()
+
+    if json.get('error'):
+        if json['error']['code'] == 403:
+            return err_no_api
+        else:
+            return 'Error performing search.'
+
+    if json['pageInfo']['totalResults'] == 0:
+        return 'No results found.'
+    
+    video_id = json['items'][0]['id']['videoId']
+
+    return get_video_description(video_id) + " - " + video_url % video_id
