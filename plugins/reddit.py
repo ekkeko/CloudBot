@@ -5,6 +5,7 @@ import asyncio
 import functools
 import urllib.parse
 
+import praw
 import requests
 
 from cloudbot import hook
@@ -110,3 +111,36 @@ def reddit(text, bot, loop):
         item = random.choice(data)["data"]
 
     return format_output(item, show_url=True)
+
+@hook.on_start
+def reddit_login(bot):
+    global reddit_instance 
+    reddit_instance = praw.Reddit(client_id=bot.config.get("api_keys", {}).get("reddit_client_id", None),
+            client_secret=bot.config.get("api_keys", {}).get("reddit_client_secret", None),
+            user_agent=bot.config.get("api_keys", {}).get("reddit_user_agent", None),
+            username=bot.config.get("api_keys", {}).get("reddit_username", None),
+            password=bot.config.get("api_keys", {}).get("reddit_password", None))
+            
+def get_image(subname):
+    sub = reddit_instance.subreddit(subname)
+    submissions = list(sub.search(query='url:.jpg OR url:.png OR url:.gif OR url:.gifv',syntax='lucene'))
+    if not submissions:
+        raise praw.exceptions.PRAWException('Could not find any images')
+    return random.choice(submissions)
+
+@hook.command('image')
+def reddit_random_image_search(text):
+    try:
+        subm = get_image(text)
+    except praw.exceptions.PRAWException as e:
+        return e
+    return '{} ({}) {}'.format(subm.url, subm.shortlink, ' \x0304NSFW' if subm.over_18 else '')
+    
+@hook.command('bork')
+def random_bork_search():
+    subs = ['woof_irl', 'woofbarkwoof', 'supershibe', 'rarepuppers']
+    try:
+        subm = get_image(random.choice(subs))
+    except praw.exceptions.PRAWException as e:
+        return either
+    return '{} ({}) {}'.format(subm.url, subm.shortlink, ' \x0304NSFW' if subm.over_18 else '')
