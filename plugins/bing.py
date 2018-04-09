@@ -2,10 +2,10 @@ import random
 
 import requests
 from lxml import html
+from requests import HTTPError
 
 from cloudbot import hook
 from cloudbot.util import formatting, filesize, colors
-
 
 API_URL = "https://api.datamarket.azure.com/Bing/Search/v1/Composite"
 
@@ -30,7 +30,7 @@ def bingify(s):
 
 
 @hook.command("bing", "b")
-def bing(text, bot):
+def bing(text, bot, reply):
     """<query> - returns the first bing search result for <query>"""
     api_key = bot.config.get("api_keys", {}).get("bing_azure")
 
@@ -55,6 +55,12 @@ def bing(text, bot):
 
     request = requests.get(API_URL, params=params, auth=(api_key, api_key))
 
+    try:
+        request.raise_for_status()
+    except HTTPError:
+        reply("Bing API error occurred.")
+        raise
+
     # I'm not even going to pretend to know why results are in ['d']['results'][0]
     j = request.json()['d']['results'][0]
 
@@ -73,7 +79,7 @@ def bing(text, bot):
 
 
 @hook.command("bingimage", "bis")
-def bingimage(text, bot):
+def bingimage(text, bot, reply):
     """<query> - returns the first bing image search result for <query>"""
     api_key = bot.config.get("api_keys", {}).get("bing_azure")
 
@@ -99,6 +105,12 @@ def bingimage(text, bot):
 
     request = requests.get(API_URL, params=params, auth=(api_key, api_key))
 
+    try:
+        request.raise_for_status()
+    except HTTPError:
+        reply("Bing API error occurred.")
+        raise
+
     # I'm not even going to pretend to know why results are in ['d']['results'][0]
     j = request.json()['d']['results'][0]
 
@@ -109,14 +121,15 @@ def bingimage(text, bot):
     result = random.choice(j["Image"][:10])
 
     # output stuff
-    tags = []
+    tags = [
+        # image size
+        "{}x{}px".format(result["Width"], result["Height"]),
+        # file type
+        result["ContentType"],
+        # file size
+        filesize.size(int(result["FileSize"]), system=filesize.alternative),
+    ]
 
-    # image size
-    tags.append("{}x{}px".format(result["Width"], result["Height"]))
-    # file type
-    tags.append(result["ContentType"])
-    # file size
-    tags.append(filesize.size(int(result["FileSize"]), system=filesize.alternative))
     # NSFW warning
     if "explicit" in result["Thumbnail"]["MediaUrl"]:
         tags.append("NSFW")

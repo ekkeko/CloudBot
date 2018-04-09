@@ -1,4 +1,5 @@
 import re
+
 import requests
 
 from cloudbot import hook
@@ -9,7 +10,7 @@ imdb_re = re.compile(r'(.*:)//(imdb.com|www.imdb.com)(:[0-9]+)?(.*)', re.I)
 
 @hook.command
 def imdb(text, bot):
-    """imdb <movie> - gets information about <movie> from IMDb"""
+    """<movie> - gets information about <movie> from IMDb"""
 
     headers = {'User-Agent': bot.user_agent}
     strip = text.strip()
@@ -25,6 +26,7 @@ def imdb(text, bot):
         "https://imdb-scraper.herokuapp.com/" + endpoint,
         params=params,
         headers=headers)
+    request.raise_for_status()
     content = request.json()
 
     if content['success'] is False:
@@ -65,5 +67,5 @@ def movie_str(movie):
         out += ' \x02%(runtime)s\x02.'
     if movie['rating'] != 'N/A' and movie['votes'] != 'N/A':
         out += ' \x02%(rating)s/10\x02 with \x02%(votes)s\x02' \
-                ' votes.'
+               ' votes.'
     return out % movie
