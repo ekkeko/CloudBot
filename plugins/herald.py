@@ -108,10 +108,10 @@ def welcome(nick, action, message, chan, event, db, conn):
     bino_re = re.compile('b+i+n+o+', re.IGNORECASE)
     offensive_re = re.compile('卐')
 
-    try:
-        chan = event.irc_raw.split(':')[2].lower()
-    except:
-        return
+    #try:
+    #    chan = event.irc_raw.split(':')[2].lower()
+    #except:
+    #    return
     if chan in opt_out:
         return
 
