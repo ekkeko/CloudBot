@@ -142,5 +142,13 @@ def random_bork_search():
     try:
         subm = get_image(random.choice(subs))
     except praw.exceptions.PRAWException as e:
-        return either
+        return e
+    return '{} ({}) {}'.format(subm.url, subm.shortlink, ' \x0304NSFW' if subm.over_18 else '')
+
+@hook.command('om','nom')
+def random_nom_search():
+    try:
+        subm = get_image('gifrecipes')
+    except praw.exceptions.PRAWException as e:
+        return e
     return '{} ({}) {}'.format(subm.url, subm.shortlink, ' \x0304NSFW' if subm.over_18 else '')

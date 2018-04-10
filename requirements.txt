@@ -13,8 +13,9 @@ requests
 psutil
 requests-oauthlib
 tweepy
-pyenchant
 pythonwhois
 imgurpython
 isodate
 yarl
+wikipedia
+unidecode
