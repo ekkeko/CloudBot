@@ -3,7 +3,7 @@ import re
 import random
 import asyncio
 import functools
-import urllib.parse
+from urllib.parse import urlparse
 
 import praw
 import requests
@@ -121,12 +121,38 @@ def reddit_login(bot):
             username=bot.config.get("api_keys", {}).get("reddit_username", None),
             password=bot.config.get("api_keys", {}).get("reddit_password", None))
             
+def is_image(url):
+    parsed = urlparse(url)
+    splitted = parsed.path.split('.')
+    if len(splitted) > 1 and splitted[1] in ['jpg', 'gifv', 'gif', 'jpeg', 'png'] or 'gfycat' in parsed.netloc:
+        return True
+    else:
+        return False
+
 def get_image(subname):
+    
+    MAX_IMAGE_LIST = 50
+    LIMIT_NO_IMG = 50
+
     sub = reddit_instance.subreddit(subname)
-    submissions = list(sub.search(query='url:.jpg OR url:.png OR url:.gif OR url:.gifv',syntax='lucene'))
-    if not submissions:
-        raise praw.exceptions.PRAWException('Could not find any images')
-    return random.choice(submissions)
+        
+    submlist = []
+    
+    for index, submission in enumerate(sub.hot(limit=900)):
+        if not submission.is_self and is_image(submission.url):
+            submlist.append(submission)
+            
+        if len(submlist) >= MAX_IMAGE_LIST:
+            break
+            
+        # give up if couldn't find any images in the first LIMIT_NO_IMG submissions
+        if index > LIMIT_NO_IMG and len(submlist) == 0:
+            break
+            
+    if submlist:
+        return random.choice(submlist)
+    else:
+        raise praw.exceptions.PRAWException('Could not find image')
 
 @hook.command('image')
 def reddit_random_image_search(text):
@@ -134,21 +160,30 @@ def reddit_random_image_search(text):
         subm = get_image(text)
     except praw.exceptions.PRAWException as e:
         return e
-    return '{} ({}) {}'.format(subm.url, subm.shortlink, ' \x0304NSFW' if subm.over_18 else '')
+    return '{} ( {} ) {}'.format(subm.url, subm.shortlink, ' \x0304NSFW' if subm.over_18 else '')
     
 @hook.command('bork')
 def random_bork_search():
-    subs = ['woof_irl', 'woofbarkwoof', 'supershibe', 'rarepuppers']
+    sub = random.choice(['woof_irl', 'woofbarkwoof', 'supershibe', 'rarepuppers', 'dogpictures', 'doggos', 'surpriseddogs'])
     try:
-        subm = get_image(random.choice(subs))
+        subm = get_image(sub)
     except praw.exceptions.PRAWException as e:
         return e
-    return '{} ({}) {}'.format(subm.url, subm.shortlink, ' \x0304NSFW' if subm.over_18 else '')
+    return '{} ( {} ) {}'.format(subm.url, subm.shortlink, ' \x0304NSFW' if subm.over_18 else '')
 
-@hook.command('om','nom')
+@hook.command('meow','miau')
+def random_meow_search():
+    sub = random.choice(['catsstandingup', 'catpictures', 'kitty', 'cats', 'catsinbusinessattire', 'meow_irl'])
+    try:
+        subm = get_image(sub)
+    except praw.exceptions.PRAWException as e:
+        return e
+    return '{} ( {} ) {}'.format(subm.url, subm.shortlink, ' \x0304NSFW' if subm.over_18 else '')
+
+@hook.command('omnomnom','nom')
 def random_nom_search():
     try:
         subm = get_image('gifrecipes')
     except praw.exceptions.PRAWException as e:
         return e
-    return '{} ({}) {}'.format(subm.url, subm.shortlink, ' \x0304NSFW' if subm.over_18 else '')
+    return '{} ( {} ) {}'.format(subm.url, subm.shortlink, ' \x0304NSFW' if subm.over_18 else '')
