@@ -49,7 +49,7 @@ def reddit_url(match, bot):
         url = "http://" + url
         response = requests.get(url)
         url = response.url + "/.json"
-    if not urllib.parse.urlparse(url).scheme:
+    if not urlparse(url).scheme:
         url = "http://" + url + "/.json"
 
     # the reddit API gets grumpy if we don't include headers
@@ -155,7 +155,7 @@ def get_image(subname):
         raise praw.exceptions.PRAWException('Could not find image')
 
 def get_displayline(submission):
-    return '{} ({} - {} - {} ) {}'.format(submission.url, submission.subreddit_name_prefixed, submission.title, submission.shortlink, ' \x0304NSFW' if submission.over_18 else '')
+    return '{} ( {} - {} - {} ) {}'.format(submission.url, submission.subreddit_name_prefixed, submission.title, submission.shortlink, ' \x0304NSFW' if submission.over_18 else '')
 
 @hook.command('image')
 def reddit_random_image_search(text):
@@ -185,8 +185,18 @@ def random_meow_search():
 
 @hook.command('omnomnom','nom')
 def random_nom_search():
+    sub = random.choice(['gifrecipes','foodporn'])
     try:
-        subm = get_image('gifrecipes')
+        subm = get_image(sub)
+    except praw.exceptions.PRAWException as e:
+        return e
+    return get_displayline(subm)
+
+@hook.command('quack')
+def random_duck_search():
+    sub = random.choice(['duck'])
+    try:
+        subm = get_image(sub)
     except praw.exceptions.PRAWException as e:
         return e
     return get_displayline(subm)
