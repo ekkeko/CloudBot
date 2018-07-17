@@ -11,6 +11,32 @@ import requests
 from cloudbot import hook
 from cloudbot.util import timeformat, formatting
 
+sub_re = re.compile(r'^(?:/?r/)?(?P<name>.+)$', re.IGNORECASE)
+
+
+def get_sub(text):
+    match = sub_re.match(text)
+    if match:
+        return match.group('name')
+
+
+reddit_re = re.compile(
+    r"""
+    https? # Scheme
+    ://
+
+    # Domain
+    (?:
+        redd\.it|
+        (?:www\.)?reddit\.com/r
+    )
+
+    (?:/(?:[A-Za-z0-9!$&-.:;=@_~\u00A0-\u10FFFD]|%[A-F0-9]{2})*)*  # Path
+
+    (?:\?(?:[A-Za-z0-9!$&-;=@_~\u00A0-\u10FFFD]|%[A-F0-9]{2})*)?  # Query
+    """,
+    re.IGNORECASE | re.VERBOSE
+)
 
 reddit_re = re.compile(r'.*(((www\.)?reddit\.com/r|redd\.it)[^ ]+)', re.I)
 
@@ -77,6 +103,8 @@ def reddit(text, bot, loop):
     if text:
         # clean and split the input
         parts = text.lower().strip().split()
+        sub = get_sub(parts.pop(0).strip())
+        url = base_url.format(sub)
 
         # find the requested post number (if any)
         if len(parts) > 1:
