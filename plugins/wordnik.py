@@ -5,6 +5,7 @@ import urllib.parse
 import requests
 
 from cloudbot import hook
+from cloudbot.bot import bot
 from cloudbot.util import web
 
 API_URL = 'http://api.wordnik.com/v4/'
@@ -23,15 +24,10 @@ def sanitize(text):
     return urllib.parse.quote(text.translate({ord('\\'): None, ord('/'): None}))
 
 
-@hook.on_start()
-def load_key(bot):
-    global api_key
-    api_key = bot.config.get("api_keys", {}).get("wordnik", None)
-
-
 @hook.command("define", "dictionary")
 def define(text):
     """<word> - Returns a dictionary definition from Wordnik for <word>."""
+    api_key = bot.config.get_api_key('wordnik')
     if not api_key:
         return "This command requires an API key from wordnik.com."
     word = sanitize(text)
@@ -51,13 +47,14 @@ def define(text):
         data['url'] = web.try_shorten(WEB_URL.format(data['word']))
         data['attrib'] = ATTRIB_NAMES[data['sourceDictionary']]
         return "\x02{word}\x02: {text} - {url} ({attrib})".format(**data)
-    else:
-        return "I could not find a definition for \x02{}\x02.".format(text)
+
+    return "I could not find a definition for \x02{}\x02.".format(text)
 
 
 @hook.command("wordusage", "wordexample", "usage")
 def word_usage(text):
     """<word> - Returns an example sentence showing the usage of <word>."""
+    api_key = bot.config.get_api_key('wordnik')
     if not api_key:
         return "This command requires an API key from wordnik.com."
     word = sanitize(text)
@@ -73,13 +70,14 @@ def word_usage(text):
         example = random.choice(json['examples'])
         out += "{} ".format(example['text'])
         return " ".join(out.split())
-    else:
-        return "I could not find any usage examples for \x02{}\x02.".format(text)
+
+    return "I could not find any usage examples for \x02{}\x02.".format(text)
 
 
 @hook.command("pronounce", "sounditout")
 def pronounce(text):
     """<word> - Returns instructions on how to pronounce <word> with an audio example."""
+    api_key = bot.config.get_api_key('wordnik')
     if not api_key:
         return "This command requires an API key from wordnik.com."
     word = sanitize(text)
@@ -116,6 +114,7 @@ def pronounce(text):
 @hook.command()
 def synonym(text):
     """<word> - Returns a list of synonyms for <word>."""
+    api_key = bot.config.get_api_key('wordnik')
     if not api_key:
         return "This command requires an API key from wordnik.com."
     word = sanitize(text)
@@ -132,13 +131,14 @@ def synonym(text):
         out = "\x02{}\x02: ".format(text)
         out += " • ".join(json[0]['words'])
         return " ".join(out.split())
-    else:
-        return "Sorry, I couldn't find any synonyms for \x02{}\x02.".format(text)
+
+    return "Sorry, I couldn't find any synonyms for \x02{}\x02.".format(text)
 
 
 @hook.command()
 def antonym(text):
     """<word> - Returns a list of antonyms for <word>."""
+    api_key = bot.config.get_api_key('wordnik')
     if not api_key:
         return "This command requires an API key from wordnik.com."
     word = sanitize(text)
@@ -157,14 +157,15 @@ def antonym(text):
         out += " • ".join(json[0]['words'])
         out = out[:-2]
         return " ".join(out.split())
-    else:
-        return "Sorry, I couldn't find any antonyms for \x02{}\x02.".format(text)
+
+    return "Sorry, I couldn't find any antonyms for \x02{}\x02.".format(text)
 
 
 # word of the day
 @hook.command("word", "wordoftheday", autohelp=False)
 def wordoftheday(text):
     """[date] - returns the word of the day. To see past word of the day enter use the format yyyy-MM-dd. The specified date must be after 2009-08-10."""
+    api_key = bot.config.get_api_key('wordnik')
     if not api_key:
         return "This command requires an API key from wordnik.com."
     match = re.search(r'(\d\d\d\d-\d\d-\d\d)', text)
@@ -196,8 +197,8 @@ def wordoftheday(text):
         out += "\x0310{}\x0310 ".format(note)
         out += "\x02Definition:\x02 \x0303{}\x0303".format(definition)
         return " ".join(out.split())
-    else:
-        return "Sorry I couldn't find the word of the day, check out this awesome otter instead {}".format(
+
+    return "Sorry I couldn't find the word of the day, check out this awesome otter instead {}".format(
             "http://i.imgur.com/pkuWlWx.gif")
 
 
@@ -205,6 +206,7 @@ def wordoftheday(text):
 @hook.command("wordrandom", "randomword", autohelp=False)
 def random_word():
     """- Grabs a random word from wordnik.com"""
+    api_key = bot.config.get_api_key('wordnik')
     if not api_key:
         return "This command requires an API key from wordnik.com."
     url = API_URL + "words.json/randomWord"
@@ -217,5 +219,5 @@ def random_word():
     if json:
         word = json['word']
         return "Your random word is \x02{}\x02.".format(word)
-    else:
-        return "There was a problem contacting the Wordnik API."
+
+    return "There was a problem contacting the Wordnik API."

@@ -9,7 +9,7 @@ shortcuts = {
 
 
 @hook.command("ghissue", "issue")
-def issue(text):
+def issue_cmd(text):
     """<username|repo> [number] - gets issue [number]'s summary, or the open issue count if no issue is specified"""
     args = text.split()
     repo = args[0] if args[0] not in shortcuts else shortcuts[args[0]]
@@ -30,13 +30,12 @@ def issue(text):
             state = '\x034\x02Closed\x02\x0f by {}'.format(j['closed_by']['login'])
 
         return 'Issue #{} ({}): {} | {}: {}'.format(number, state, url, title, summary)
-    else:
-        r = requests.get('https://api.github.com/repos/{}/issues'.format(repo))
-        r.raise_for_status()
-        j = r.json()
+    r = requests.get('https://api.github.com/repos/{}/issues'.format(repo))
+    r.raise_for_status()
+    j = r.json()
 
-        count = len(j)
-        if count is 0:
-            return 'Repository has no open issues.'
-        else:
-            return 'Repository has {} open issues.'.format(count)
+    count = len(j)
+    if count == 0:
+        return 'Repository has no open issues.'
+
+    return 'Repository has {} open issues.'.format(count)

@@ -17,10 +17,9 @@ class RespType(Enum):
 
 def is_self(conn, target):
     """ Checks if a string is "****self" or contains conn.name. """
-    if re.search("(^..?.?.?self|{})".format(re.escape(conn.nick)), target, re.I):
-        return True
-    else:
-        return False
+    return bool(re.search(
+        "(^..?.?.?self|{})".format(re.escape(conn.nick)), target, re.I
+    ))
 
 
 attack_data = defaultdict(dict)
@@ -69,6 +68,7 @@ ATTACKS = (
     BasicAttack("hug", "<user> - hugs <user>", response=RespType.MESSAGE),
     BasicAttack("highfive", "<user> - highfives <user>", "high5", "hi5", "highfive", response=RespType.MESSAGE),
     BasicAttack("fight", "<user> - fights <user>", "fight", "fite", "spar", "challenge", response=RespType.MESSAGE),
+    BasicAttack("pokemon", "<user> - uses a pokémon on <user>", response=RespType.MESSAGE),
 )
 
 

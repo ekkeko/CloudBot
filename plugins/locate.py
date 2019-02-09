@@ -1,8 +1,9 @@
 import requests
 
 from cloudbot import hook
-
 # Define some constants
+from cloudbot.bot import bot
+
 base_url = 'https://maps.googleapis.com/maps/api/'
 geocode_api = base_url + 'geocode/json'
 
@@ -16,28 +17,27 @@ def check_status(status):
         Returns None if no errors found """
     if status == 'REQUEST_DENIED':
         return 'The geocode API is off in the Google Developers Console.'
-    elif status == 'ZERO_RESULTS':
+
+    if status == 'ZERO_RESULTS':
         return 'No results found.'
-    elif status == 'OVER_QUERY_LIMIT':
+
+    if status == 'OVER_QUERY_LIMIT':
         return 'The geocode API quota has run out.'
-    elif status == 'UNKNOWN_ERROR':
+
+    if status == 'UNKNOWN_ERROR':
         return 'Unknown Error.'
-    elif status == 'INVALID_REQUEST':
+
+    if status == 'INVALID_REQUEST':
         return 'Invalid Request.'
-    elif status == 'OK':
+
+    if status == 'OK':
         return None
-
-
-@hook.on_start
-def load_key(bot):
-    """ Loads the API key for Google APIs """
-    global dev_key
-    dev_key = bot.config.get("api_keys", {}).get("google_dev_key", None)
 
 
 @hook.command("locate", "maps")
 def locate(text):
     """<location> -- Finds <location> on Google Maps."""
+    dev_key = bot.config.get_api_key("google_dev_key")
     if not dev_key:
         return "This command requires a Google Developers Console API key."
 

@@ -1,11 +1,11 @@
 language: python
+dist: xenial
+sudo: true
 python:
-  - "3.4"
   - "3.5"
   - "3.6"
-  - "3.7-dev"
-  - "nightly"
-  - "pypy3"
+  - "3.7"
+  - "pypy3.5"
 
 cache: pip
 
@@ -15,16 +15,13 @@ install:
   - "pip install -r ./travis/requirements.txt"
 
 script:
-  - "py.test . -R : -v --cov . --cov-report term-missing --pylint --pylint-rcfile=travis/pylintrc"
+  - "py.test -v"
 
 after_success:
-  - "coveralls"
+  - 'coverage xml'
+  - 'coveralls'
+  - 'python-codacy-coverage -r coverage.xml'
 
 env:
   - PYTHONPATH=.
   - PYTHONPATH=. PYTHONASYNCIODEBUG=1
-
-matrix:
-  allow_failures:
-    - python: "3.7-dev"
-    - python: "nightly"

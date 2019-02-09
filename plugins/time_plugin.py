@@ -5,6 +5,7 @@ import time
 import requests
 
 from cloudbot import hook
+from cloudbot.bot import bot
 
 # Define some constants
 base_url = 'https://maps.googleapis.com/maps/api/'
@@ -21,31 +22,30 @@ def check_status(status, api):
         Returns None if no errors found """
     if status == 'REQUEST_DENIED':
         return 'The ' + api + ' API is off in the Google Developers Console.'
-    elif status == 'ZERO_RESULTS':
+
+    if status == 'ZERO_RESULTS':
         return 'No results found.'
-    elif status == 'OVER_QUERY_LIMIT':
+
+    if status == 'OVER_QUERY_LIMIT':
         return 'The ' + api + ' API quota has run out.'
-    elif status == 'UNKNOWN_ERROR':
+
+    if status == 'UNKNOWN_ERROR':
         return 'Unknown Error.'
-    elif status == 'INVALID_REQUEST':
+
+    if status == 'INVALID_REQUEST':
         return 'Invalid Request.'
-    elif status == 'OK':
+
+    if status == 'OK':
         return None
-    else:
-        # !!!
-        return 'Unknown Demons.'
 
-
-@hook.on_start
-def load_key(bot):
-    """ Loads the API key for Google APIs """
-    global dev_key
-    dev_key = bot.config.get("api_keys", {}).get("google_dev_key", None)
+    # !!!
+    return 'Unknown Demons.'
 
 
 @hook.command("time")
 def time_command(text, reply):
     """<location> - Gets the current time in <location>."""
+    dev_key = bot.config.get_api_key("google_dev_key")
     if not dev_key:
         return "This command requires a Google Developers Console API key."
 
@@ -120,7 +120,8 @@ def beats(text):
                "ter midnight. So, @248 would indicate a time 248 .beats after midni" \
                "ght representing 248/1000 of a day, just over 5 hours and 57 minute" \
                "s. There are no timezones."
-    elif text.lower() == "guide":
+
+    if text.lower() == "guide":
         return "1 day = 1000 .beats, 1 hour = 41.666 .beats, 1 min = 0.6944 .beats, 1 second = 0.01157 .beats"
 
     t = time.gmtime()

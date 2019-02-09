@@ -65,12 +65,12 @@ def get_encoding(soup):
 
     if meta_charset:
         return meta_charset['charset']
-    else:
-        meta_content_type = soup.find(
-            'meta', {'http-equiv': lambda t: t and t.lower() == 'content-type', 'content': True}
-        )
-        if meta_content_type:
-            return requests.utils.get_encoding_from_headers({'content-type': meta_content_type['content']})
+
+    meta_content_type = soup.find(
+        'meta', {'http-equiv': lambda t: t and t.lower() == 'content-type', 'content': True}
+    )
+    if meta_content_type:
+        return requests.utils.get_encoding_from_headers({'content-type': meta_content_type['content']})
 
     return None
 
@@ -90,8 +90,7 @@ def parse_content(content, encoding=None):
 @hook.regex(url_re, priority=Priority.LOW, action=Action.HALTTYPE, only_no_match=True)
 def print_url_title(message, match):
     with closing(requests.get(match.group(), headers=HEADERS, stream=True, timeout=3)) as r:
-        r.raise_for_status()
-        if not r.encoding:
+        if not r.encoding or not r.ok:
             return
 
         # TODO Switch to reading chunks until full title is found, up to MAX_RECV bytes

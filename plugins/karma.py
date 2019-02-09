@@ -8,7 +8,7 @@ from sqlalchemy import Table, String, Column, Integer, PrimaryKeyConstraint, sel
 from cloudbot import hook
 from cloudbot.util import database
 
-karmaplus_re = re.compile('^.*\+\+$')
+karmaplus_re = re.compile(r'^.*\+\+$')
 karmaminus_re = re.compile('^.*--$')
 
 karma_table = Table(
@@ -108,7 +108,7 @@ def re_rmpt(match, nick, chan, db, notice):
 
 
 @hook.command("points", autohelp=False)
-def points(text, chan, db):
+def points_cmd(text, chan, db):
     """<thing> - will print the total points for <thing> in the channel."""
     score = 0
     thing = ""
@@ -134,64 +134,48 @@ def points(text, chan, db):
             return "{} has a total score of {} (+{}/{}) across all channels I know about.".format(thing, score, pos,
                                                                                                   neg)
         return "{} has a total score of {} (+{}/{}) in {}.".format(text, score, pos, neg, chan)
+
+    return "I couldn't find {} in the database.".format(text)
+
+
+def parse_lookup(text, db, chan, name):
+    if text == "global" or text == "-global":
+        items = db.execute(select([karma_table.c.thing, karma_table.c.score])).fetchall()
+        out = "The {{}} most {} things in all channels are: ".format(name)
     else:
-        return "I couldn't find {} in the database.".format(text)
+        items = db.execute(
+            select([karma_table.c.thing, karma_table.c.score]).where(karma_table.c.chan == chan)
+        ).fetchall()
+        out = "The {{}} most {} things in {{}} are: ".format(name)
+
+    return out, items
+
+
+def do_list(text, db, chan, loved=True):
+    counts = defaultdict(int)
+    out, items = parse_lookup(text, db, chan, 'loved' if loved else 'hated')
+    if items:
+        for item in items:
+            thing = item[0]
+            score = int(item[1])
+            counts[thing] += score
+
+        scores = counts.items()
+        sorts = sorted(scores, key=operator.itemgetter(1), reverse=loved)[:10]
+        out = out.format(len(sorts), chan) + ' \u2022 '.join(
+            "{} with {} points".format(thing[0], thing[1])
+            for thing in sorts
+        )
+        return out
 
 
 @hook.command("topten", "pointstop", "loved", autohelp=False)
 def pointstop(text, chan, db):
     """- prints the top 10 things with the highest points in the channel. To see the top 10 items in all of the channels the bot sits in use .topten global."""
-    points = defaultdict(int)
-    if text == "global" or text == "-global":
-        items = db.execute(select([karma_table.c.thing, karma_table.c.score])).fetchall()
-        out = "The top {} favorite things in all channels are: "
-    else:
-        items = db.execute(
-            select([karma_table.c.thing, karma_table.c.score]).where(karma_table.c.chan == chan)
-        ).fetchall()
-        out = "The top {} favorite things in {} are: "
-
-    if items:
-        for item in items:
-            thing = item[0]
-            score = int(item[1])
-            points[thing] += score
-        scores = points.items()
-        sorts = sorted(scores, key=operator.itemgetter(1), reverse=True)
-        ten = str(len(sorts))
-        if int(ten) > 10:
-            ten = "10"
-        out = out.format(ten, chan)
-        for i in range(0, int(ten)):
-            out += "{} with {} points \u2022 ".format(sorts[i][0], sorts[i][1])
-        out = out[:-2]
-        return out
+    return do_list(text, db, chan)
 
 
 @hook.command("bottomten", "pointsbottom", "hated", autohelp=False)
 def pointsbottom(text, chan, db):
     """- prints the top 10 things with the lowest points in the channel. To see the bottom 10 items in all of the channels the bot sits in use .bottomten global."""
-    points = defaultdict(int)
-    if text == "global" or text == "-global":
-        items = db.execute(select([karma_table.c.thing, karma_table.c.score])).fetchall()
-        out = "The {} most hated things in all channels are: "
-    else:
-        items = db.execute(
-            select([karma_table.c.thing, karma_table.c.score]).where(karma_table.c.chan == chan)
-        ).fetchall()
-        out = "The {} most hated things in {} are: "
-    if items:
-        for item in items:
-            thing = item[0]
-            score = int(item[1])
-            points[thing] += score
-        scores = points.items()
-        sorts = sorted(scores, key=operator.itemgetter(1))
-        ten = str(len(sorts))
-        if int(ten) > 10:
-            ten = "10"
-        out = out.format(ten, chan)
-        for i in range(0, int(ten)):
-            out += "{} with {} points \u2022 ".format(sorts[i][0], sorts[i][1])
-        out = out[:-2]
-        return out
+    return do_list(text, db, chan, False)

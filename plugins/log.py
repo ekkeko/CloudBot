@@ -1,4 +1,3 @@
-import asyncio
 import codecs
 import os
 import time
@@ -6,11 +5,11 @@ import time
 import cloudbot
 from cloudbot import hook
 from cloudbot.event import EventType
+from cloudbot.util.formatting import strip_colors
+
 # +---------+
 # | Formats |
 # +---------+
-from cloudbot.util.formatting import strip_colors
-
 base_formats = {
     EventType.message: "[{server}:{channel}] <{nick}> {content}",
     EventType.notice: "[{server}:{channel}] -{nick}- {content}",
@@ -100,13 +99,13 @@ def format_irc_event(event, args):
         if ctcp_command in ("VERSION", "PING", "TIME", "FINGER"):
             if ctcp_message:
                 return ctcp_known_with_message.format(**args)
-            else:
-                return ctcp_known.format(**args)
-        else:
-            if ctcp_message:
-                return ctcp_unknown_with_message.format(**args)
-            else:
-                return ctcp_unknown.format(**args)
+
+            return ctcp_known.format(**args)
+
+        if ctcp_message:
+            return ctcp_unknown_with_message.format(**args)
+
+        return ctcp_unknown.format(**args)
 
     # No formats have been found, resort to the default
 
@@ -116,10 +115,12 @@ def format_irc_event(event, args):
 
     if not logging_config.get("show_motd", True) and event.irc_command in ("375", "372", "376"):
         return None
-    elif not logging_config.get("show_server_info", True) and event.irc_command in (
+
+    if not logging_config.get("show_server_info", True) and event.irc_command in (
         "003", "005", "250", "251", "252", "253", "254", "255", "256"):
         return None
-    elif event.irc_command == "PING":
+
+    if event.irc_command == "PING":
         return None
 
     # Format using the default raw format
@@ -146,7 +147,7 @@ def get_log_filename(server, chan):
     current_time = time.gmtime()
     folder_name = time.strftime(folder_format, current_time)
     file_name = time.strftime(file_format.format(chan=chan, server=server), current_time).lower()
-    return os.path.join(cloudbot.logging_dir, folder_name, file_name)
+    return cloudbot.logging_info.add_path(folder_name, file_name)
 
 
 def get_log_stream(server, chan):
@@ -177,7 +178,7 @@ def get_raw_log_filename(server):
     current_time = time.gmtime()
     folder_name = time.strftime(folder_format, current_time)
     file_name = time.strftime(raw_file_format.format(server=server), current_time).lower()
-    return os.path.join(cloudbot.logging_dir, "raw", folder_name, file_name)
+    return cloudbot.logging_info.add_path("raw", folder_name, file_name)
 
 
 def get_raw_log_stream(server):
@@ -234,8 +235,7 @@ def log(event):
 
 # Log console separately to prevent lag
 @hook.irc_raw("*")
-@asyncio.coroutine
-def console_log(bot, event):
+async def console_log(bot, event):
     """
     :type bot: cloudbot.bot.CloudBot
     :type event: cloudbot.event.Event

@@ -53,7 +53,7 @@ HOUR_CLOCK = r'(?P<hours>\d+):(?P<mins>\d{2}):(?P<secs>\d{2}(?:\.\d+)?)'
 DAY_CLOCK = (r'(?P<days>\d+):(?P<hours>\d{2}):'
              r'(?P<mins>\d{2}):(?P<secs>\d{2}(?:\.\d+)?)')
 
-OPT = lambda x: r'(?:{x})?'.format(x=x, SEPARATORS=SEPARATORS)
+OPT = lambda x: r'(?:{x})?'.format(x=x)
 OPT_SEP = lambda x: r'(?:{x}\s*(?:{SEPARATORS}\s*)?)?'.format(
     x=x, SEPARATORS=SEPARATORS)
 
@@ -159,16 +159,15 @@ def time_parse(string, granularity='seconds'):
             if all(v.isdigit() for v in list(mdict.values()) if v):
                 return sign * sum([MULTIPLIERS[k] * int(v, 10) for (k, v) in
                                    list(mdict.items()) if v is not None])
+
             # if SECS is an integer number
-            elif ('secs' not in mdict or
-                  mdict['secs'] is None or
-                  mdict['secs'].isdigit()):
+            if mdict.get('secs') is None or mdict['secs'].isdigit():
                 # we will return an integer
                 return (
                     sign * int(sum([MULTIPLIERS[k] * float(v) for (k, v) in
                                     list(mdict.items()) if k != 'secs' and v is not None])) +
                     (int(mdict['secs'], 10) if mdict['secs'] else 0))
-            else:
-                # SECS is a float, we will return a float
-                return sign * sum([MULTIPLIERS[k] * float(v) for (k, v) in
-                                   list(mdict.items()) if v is not None])
+
+            # SECS is a float, we will return a float
+            return sign * sum([MULTIPLIERS[k] * float(v) for (k, v) in
+                               list(mdict.items()) if v is not None])

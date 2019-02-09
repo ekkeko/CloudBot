@@ -37,25 +37,25 @@ def n_rolls(count, n):
     :type count: int
     :type n: int | str
     """
-    if n == "F":
+    if n in ('f', 'F'):
         return [random.randint(-1, 1) for _ in range(min(count, 100))]
-    if n < 2:  # it's a coin
-        if count < 100:
-            return [random.randint(0, 1) for _ in range(count)]
-        else:  # fake it
-            return [int(random.normalvariate(.5 * count, (.75 * count) ** .5))]
-    else:
-        if count < 100:
-            return [random.randint(1, n) for _ in range(count)]
-        else:  # fake it
-            return [int(random.normalvariate(.5 * (1 + n) * count,
-                                             (((n + 1) * (2 * n + 1) / 6. -
-                                               (.5 * (1 + n)) ** 2) * count) ** .5))]
+
+    if count < 100:
+        return [random.randint(1, n) for _ in range(count)]
+
+    # Calculate a random sum approximated using a randomized normal variate with the midpoint used as the mu
+    # and an approximated standard deviation based on variance as the sigma
+    mid = .5 * (n + 1) * count
+    var = (n ** 2 - 1) / 12
+    adj_var = (var * count) ** 0.5
+
+    return [int(random.normalvariate(mid, adj_var))]
 
 
 @hook.command("roll", "dice")
 def dice(text, notice):
     """<dice roll> - simulates dice rolls. Example: 'dice 2d20-d5+4 roll 2': D20s, subtract 1D5, add 4
+
     :type text: str
     """
 
@@ -112,13 +112,14 @@ def dice(text, notice):
 
     if desc:
         return "{}: {} ({})".format(desc.strip(), total, ", ".join(rolls))
-    else:
-        return "{} ({})".format(total, ", ".join(rolls))
+
+    return "{} ({})".format(total, ", ".join(rolls))
 
 
 @hook.command
 def choose(text, event):
     """<choice1>, [choice2], [choice3], etc. - randomly picks one of the given choices
+
     :type text: str
     """
     choices = re.findall(r'([^,]+)', text.strip())
@@ -134,6 +135,7 @@ def choose(text, event):
 @hook.command(autohelp=False)
 def coin(text, notice, action):
     """[amount] - flips [amount] coins
+
     :type text: str
     """
 

@@ -26,19 +26,24 @@ def get_channels(db, conn):
 
 @hook.on_start
 def load_cache(db):
+    new_cache = defaultdict(set)
+    for row in db.execute(table.select()):
+        new_cache[row['conn']].add(row['chan'])
+
     with db_lock:
         chan_cache.clear()
-        for row in db.execute(table.select()):
-            chan_cache[row['conn']].add(row['chan'])
+        chan_cache.update(new_cache)
 
 
 @hook.irc_raw('376')
-@asyncio.coroutine
-def do_joins(conn):
+async def do_joins(conn):
+    while not conn.ready:
+        await asyncio.sleep(1)
+
     join_throttle = conn.config.get("join_throttle", 0.4)
     for chan in chan_cache[conn.name]:
         conn.join(chan)
-        yield from asyncio.sleep(join_throttle)
+        await asyncio.sleep(join_throttle)
 
 
 @hook.irc_raw('JOIN', singlethread=True)

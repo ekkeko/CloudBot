@@ -1,4 +1,3 @@
-import asyncio
 import concurrent.futures
 import enum
 import logging
@@ -6,7 +5,7 @@ import sys
 import warnings
 from functools import partial
 
-from cloudbot.util.parsers.irc import Message
+from irclib.parser import Message
 
 logger = logging.getLogger("cloudbot")
 
@@ -138,8 +137,7 @@ class Event:
             self.irc_paramlist = irc_paramlist
             self.irc_ctcp_text = irc_ctcp_text
 
-    @asyncio.coroutine
-    def prepare(self):
+    async def prepare(self):
         """
         Initializes this event to be run through it's hook
 
@@ -158,7 +156,7 @@ class Event:
             # we're running a coroutine hook with a db, so initialise an executor pool
             self.db_executor = concurrent.futures.ThreadPoolExecutor(1)
             # be sure to initialize the db in the database executor, so it will be accessible in that thread.
-            self.db = yield from self.async_call(self.bot.db_session)
+            self.db = await self.async_call(self.bot.db_session)
 
     def prepare_threaded(self):
         """
@@ -178,8 +176,7 @@ class Event:
 
             self.db = self.bot.db_session()
 
-    @asyncio.coroutine
-    def close(self):
+    async def close(self):
         """
         Closes this event after running it through it's hook.
 
@@ -194,7 +191,7 @@ class Event:
         if self.db is not None:
             # logger.debug("Closing database session for {}:threaded=False".format(self.hook.description))
             # be sure the close the database in the database executor, as it is only accessable in that one thread
-            yield from self.async_call(self.db.close)
+            await self.async_call(self.db.close)
             self.db = None
 
     def close_threaded(self):
@@ -222,9 +219,6 @@ class Event:
 
     @property
     def loop(self):
-        """
-        :rtype: asyncio.events.AbstractEventLoop
-        """
         return self.bot.loop
 
     @property
@@ -327,8 +321,7 @@ class Event:
             raise ValueError("has_permission requires mask is not assigned")
         return self.conn.permissions.has_perm_mask(self.mask, permission, notice=notice)
 
-    @asyncio.coroutine
-    def check_permission(self, permission, notice=True):
+    async def check_permission(self, permission, notice=True):
         """ returns whether or not the current user has a given permission
         :type permission: str
         :type notice: bool
@@ -339,29 +332,27 @@ class Event:
 
         for perm_hook in self.bot.plugin_manager.perm_hooks[permission]:
             # noinspection PyTupleAssignmentBalance
-            ok, res = yield from self.bot.plugin_manager.internal_launch(perm_hook, self)
+            ok, res = await self.bot.plugin_manager.internal_launch(perm_hook, self)
             if ok and res:
                 return True
 
         return False
 
-    @asyncio.coroutine
-    def check_permissions(self, *perms, notice=True):
+    async def check_permissions(self, *perms, notice=True):
         for perm in perms:
-            if (yield from self.check_permission(perm, notice=notice)):
+            if await self.check_permission(perm, notice=notice):
                 return True
 
         return False
 
-    @asyncio.coroutine
-    def async_call(self, func, *args, **kwargs):
+    async def async_call(self, func, *args, **kwargs):
         if self.db_executor is not None:
             executor = self.db_executor
         else:
             executor = None
 
         part = partial(func, *args, **kwargs)
-        result = yield from self.loop.run_in_executor(executor, part)
+        result = await self.loop.run_in_executor(executor, part)
         return result
 
     def is_nick_valid(self, nick):
@@ -380,13 +371,12 @@ class Event:
 
     if sys.version_info < (3, 7, 0):
         # noinspection PyCompatibility
-        @asyncio.coroutine
-        def async_(self, function, *args, **kwargs):
+        async def async_(self, function, *args, **kwargs):
             warnings.warn(
                 "event.async() is deprecated, use event.async_call() instead.",
                 DeprecationWarning, stacklevel=2
             )
-            result = yield from self.async_call(function, *args, **kwargs)
+            result = await self.async_call(function, *args, **kwargs)
             return result
 
 
@@ -433,12 +423,7 @@ class CommandEvent(Event):
         if self.hook.doc is None:
             message = "{}{} requires additional arguments.".format(self.triggered_prefix, self.triggered_command)
         else:
-            if self.hook.doc.split()[0].isalpha():
-                # this is using the old format of `name <args> - doc`
-                message = "{}{}".format(self.triggered_prefix, self.hook.doc)
-            else:
-                # this is using the new format of `<args> - doc`
-                message = "{}{} {}".format(self.triggered_prefix, self.triggered_command, self.hook.doc)
+            message = "{}{} {}".format(self.triggered_prefix, self.triggered_command, self.hook.doc)
 
         self.notice(message, target=target)
 
@@ -474,9 +459,8 @@ class IrcOutEvent(Event):
         super().__init__(*args, **kwargs)
         self.parsed_line = None
 
-    @asyncio.coroutine
-    def prepare(self):
-        yield from super().prepare()
+    async def prepare(self):
+        await super().prepare()
 
         if "parsed_line" in self.hook.required_args:
             try:

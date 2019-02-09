@@ -37,6 +37,7 @@ BASIC_FOOD = (
     BasicFood("doobie", "a doobie"),
     BasicFood("wine", "wine"),
     BasicFood("pizza", "pizza"),
+    BasicFood("vpizza", "pizza"),
     BasicFood("chocolate", "chocolate"),
     BasicFood("pasta", "pasta"),
     BasicFood("cereal", "cereal"),
@@ -55,6 +56,7 @@ BASIC_FOOD = (
     BasicFood("soup", "Some Soup"),
     BasicFood("halal", "food", "halal", "halaal"),
     BasicFood("kosher", "food"),
+    BasicFood("birthday", "birthday cake"),
 )
 
 basic_food_data = defaultdict(dict)
@@ -78,7 +80,7 @@ def load_foods(bot):
         load_template_data(bot, food.file, basic_food_data[food.name])
 
 
-def basic_format(text, nick, data, **kwargs):
+def basic_format(nick, text, data, **kwargs):
     user = text
     kwargs['user'] = user
     kwargs['target'] = user
@@ -104,7 +106,7 @@ def basic_food(food):
         if not is_nick_valid(text):
             return "I can't give {} to that user.".format(food.unit)
 
-        action(basic_format(text, nick, basic_food_data[food.name]))
+        action(basic_format(nick, text, basic_food_data[food.name]))
 
     func.__name__ = food.name
     func.__doc__ = "<user> - gives {} to [user]".format(food.unit)

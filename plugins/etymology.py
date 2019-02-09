@@ -13,11 +13,13 @@ from bs4 import BeautifulSoup
 from requests import HTTPError
 
 from cloudbot import hook
+from cloudbot.util import formatting, web
 
 
 @hook.command("e", "etymology")
 def etymology(text, reply):
     """<word> - retrieves the etymology of <word>
+
     :type text: str
     """
 
@@ -28,6 +30,8 @@ def etymology(text, reply):
     try:
         response.raise_for_status()
     except HTTPError as e:
+        if e.response.status_code == 404:
+            return "No etymology found for {} :(".format(text)
         reply("Error reaching etymonline.com: {}".format(e.response.status_code))
         raise
 
@@ -38,16 +42,14 @@ def etymology(text, reply):
 
     block = soup.find('div', class_=re.compile("word--.+"))
 
-    if not block:
-        return 'No etymology found for {} :('.format(text)
-
     etym = ' '.join(e.text for e in block.div)
 
     etym = ' '.join(etym.splitlines())
 
     etym = ' '.join(etym.split())
 
-    if len(etym) > 400:
-        etym = etym[:etym.rfind(' ', 0, 400)] + ' ...'
+    etym = formatting.truncate(etym, 200)
+
+    etym += " Source: " + web.try_shorten(response.url)
 
     return etym

@@ -31,10 +31,9 @@ def xkcd_search(term):
     if result:
         url = result.find('div', {'class': 'tinylink'}).text
         xkcd_id = url[:-1].split("/")[-1]
-        print(xkcd_id)
         return xkcd_info(xkcd_id, url=True)
-    else:
-        return "No results found!"
+
+    return "No results found!"
 
 
 @hook.regex(xkcd_re)

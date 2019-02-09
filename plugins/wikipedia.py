@@ -21,7 +21,7 @@ api_prefix = "http://en.wikipedia.org/w/api.php"
 search_url = api_prefix + "?action=opensearch&format=xml"
 random_url = api_prefix + "?action=query&format=xml&list=random&rnlimit=1&rnnamespace=0"
 
-paren_re = re.compile('\s*\(.*\)$')
+paren_re = re.compile(r'\s*\(.*\)$')
 
 wikipedia_re = re.compile('(?<=(?:en\.wikipedia\.org/wiki/))([\x21\x22\x24-\x3b\x3d\x3f-\x5a\x5c\x5e-\x7a\x7e]+)(#[\x21-\x22\x24-\x3b\x3d\x3f-\x5a\x5c\x5e-\x7a\x7e]+)?') #Finds an en-WP URL
 
@@ -80,8 +80,8 @@ def wiki(text, reply):
     if not items:
         if x.find('error') is not None:
             return 'Could not get Wikipedia page: %(code)s: %(info)s' % x.find('error').attrib
-        else:
-            return 'No results found.'
+
+        return 'No results found.'
 
     def extract(item):
         return [item.find(ns + i).text for i in

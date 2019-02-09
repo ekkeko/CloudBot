@@ -3,16 +3,10 @@
 import http.cookiejar
 import json
 import urllib.error
-import urllib.error
-import urllib.parse
-import urllib.parse
 import urllib.parse
 import urllib.request
-import urllib.request
-# noinspection PyUnresolvedReferences
 import warnings
-# noinspection PyUnresolvedReferences
-from urllib.parse import quote, quote_plus as _quote_plus
+from urllib.parse import quote_plus as _quote_plus
 
 from bs4 import BeautifulSoup
 from lxml import etree, html
@@ -36,8 +30,8 @@ jar = http.cookiejar.CookieJar()
 def get(*args, **kwargs):
     if kwargs.get("decode", True):
         return open_request(*args, **kwargs).read().decode()
-    else:
-        return open_request(*args, **kwargs).read()
+
+    return open_request(*args, **kwargs).read()
 
 
 def get_url(*args, **kwargs):
@@ -94,8 +88,8 @@ def open_request(url, query_params=None, user_agent=None, post_data=None, refere
 
     if timeout:
         return opener.open(request, timeout=timeout)
-    else:
-        return opener.open(request)
+
+    return opener.open(request)
 
 
 # noinspection PyShadowingBuiltins
@@ -130,8 +124,8 @@ def prepare_url(url, queries):
 def to_utf8(s):
     if isinstance(s, str):
         return s.encode('utf8', 'ignore')
-    else:
-        return str(s)
+
+    return str(s)
 
 
 def quote_plus(s):

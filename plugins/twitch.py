@@ -32,12 +32,13 @@ def twitch_lookup(location, reply):
             views = soup.find('span', {'id': 'views-count'}).text + " view"
             views = views + "s" if not views[0:2] == "1 " else views
             return html.unescape(fmt.format(title, channel, playing, views))
-        elif _type == "c":
+
+        if _type == "c":
             data = http.get_json("https://api.twitch.tv/kraken/videos/" + _type + _id)
             title = data['title']
             playing = data['game']
             views = str(data['views']) + " view"
-            views = views + "s" if not views[0:2] == "1 " else views
+            views = views + "s" if views[0:2] != '1 ' else views
             return html.unescape(fmt.format(title, channel, playing, views))
     else:
         data = http.get_json("https://api.twitch.tv/kraken/streams?channel=" + channel)
@@ -47,16 +48,16 @@ def twitch_lookup(location, reply):
             v = data["streams"][0]["viewers"]
             viewers = "\x033\x02Online now!\x02\x0f " + str(v) + " viewer" + ("s" if v != 1 else "")
             return html.unescape(fmt.format(title, channel, playing, viewers))
-        else:
-            try:
-                data = http.get_json("https://api.twitch.tv/kraken/channels/" + channel)
-            except Exception:
-                reply("Unable to get channel data. Maybe channel is on justin.tv instead of twitch.tv?")
-                raise
-            title = data['status']
-            playing = data['game']
-            viewers = "\x034\x02Offline\x02\x0f"
-            return html.unescape(fmt.format(title, channel, playing, viewers))
+
+        try:
+            data = http.get_json("https://api.twitch.tv/kraken/channels/" + channel)
+        except Exception:
+            reply("Unable to get channel data. Maybe channel is on justin.tv instead of twitch.tv?")
+            raise
+        title = data['status']
+        playing = data['game']
+        viewers = "\x034\x02Offline\x02\x0f"
+        return html.unescape(fmt.format(title, channel, playing, viewers))
 
 
 @hook.regex(multitwitch_re)
@@ -65,7 +66,6 @@ def multitwitch_url(match, reply):
     out = ""
     for i in usernames:
         if not test_name(i):
-            print("Not a valid username")
             return None
         if out == "":
             out = twitch_lookup(i, reply)
@@ -79,7 +79,6 @@ def twitch_url(match, reply):
     bit = match.group(4).split("#")[0]
     location = "/".join(bit.split("/")[1:])
     if not test_name(location):
-        print("Not a valid username")
         return None
     return twitch_lookup(location, reply)
 

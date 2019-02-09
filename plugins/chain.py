@@ -1,4 +1,3 @@
-import asyncio
 import itertools
 from operator import attrgetter
 
@@ -22,9 +21,12 @@ allow_cache = {}
 
 @hook.on_start
 def load_cache(db):
-    allow_cache.clear()
+    new_cache = {}
     for row in db.execute(commands.select()):
-        allow_cache[row["hook"]] = row["allowed"]
+        new_cache[row["hook"]] = row["allowed"]
+
+    allow_cache.clear()
+    allow_cache.update(new_cache)
 
 
 def format_hook_name(_hook):
@@ -99,13 +101,14 @@ def chainallow(text, db, notice_doc, bot):
             return "Added '{}' as an allowed command".format(hook_name)
 
         return "Added '{}' as a denied command".format(hook_name)
-    elif subcmd == "del":
+
+    if subcmd == "del":
         res = db.execute(commands.delete().where(commands.c.hook == hook_name))
         db.commit()
         load_cache(db)
         return "Deleted {}.".format(pluralize_auto(res.rowcount, "row"))
-    else:
-        return notice_doc()
+
+    return notice_doc()
 
 
 def parse_chain(text, bot):
@@ -131,8 +134,7 @@ def wrap_event(_hook, event, cmd, args):
 
 
 @hook.command
-@asyncio.coroutine
-def chain(text, bot, event):
+async def chain(text, bot, event):
     """<cmd1> [args...] | <cmd2> [args...] | ... - Runs commands in a chain, piping the output from previous commands to tne next"""
     cmds = parse_chain(text, bot)
 
@@ -145,7 +147,7 @@ def chain(text, bot, event):
             return
 
         if _hook.permissions:
-            allowed = yield from event.check_permissions(_hook.permissions)
+            allowed = await event.check_permissions(_hook.permissions)
             if not allowed:
                 event.notice("Sorry, you are not allowed to use '{}'.".format(format_hook_name(_hook)))
                 return
@@ -175,11 +177,11 @@ def chain(text, bot, event):
 
         _target = target
 
-    def action(message, target=None):
+    def action(msg, target=None):
         nonlocal buffer
         nonlocal out_func
         nonlocal _target
-        buffer += (" " if buffer else "") + message
+        buffer += (" " if buffer else "") + msg
         if out_func is None:
             out_func = event.action
 
@@ -197,7 +199,7 @@ def chain(text, bot, event):
             cmd_event.notice_doc()
             return "Invalid syntax."
 
-        ok, res = yield from bot.plugin_manager.internal_launch(_hook, cmd_event)
+        ok, res = await bot.plugin_manager.internal_launch(_hook, cmd_event)
         if not ok:
             return "Error occurred."
 

@@ -1,4 +1,5 @@
 # CloudBot
+[![Build Status](https://travis-ci.org/snoonetIRC/CloudBot.svg?branch=gonzobot)](https://travis-ci.org/snoonetIRC/CloudBot) [![CodeFactor](https://www.codefactor.io/repository/github/snoonetirc/cloudbot/badge/gonzobot)](https://www.codefactor.io/repository/github/snoonetirc/cloudbot/overview/gonzobot) [![Coverage Status](https://coveralls.io/repos/github/snoonetIRC/CloudBot/badge.svg?branch=gonzobot)](https://coveralls.io/github/snoonetIRC/CloudBot?branch=gonzobot) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/6aa6ba0ca9804f1a9530e0c1a9c39478)](https://www.codacy.com/app/linuxdaemon/CloudBot?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=snoonetIRC/CloudBot&amp;utm_campaign=Badge_Grade)
 
 CloudBot is a simple, fast, expandable open-source Python IRC Bot!
 
@@ -41,7 +42,7 @@ Specify the path as /path/to/repository/cloudbot/__main__.py, where `cloudbot` i
 
 ### Documentation
 
-The CloudBot documentation is currently somewhat outdated and may not be correct. If you need any help, please visit our [IRC channel](irc://irc.esper.net/cloudbot) and we will be happy to assist you.
+The CloudBot documentation is currently somewhat outdated and may not be correct. If you need any help, please visit our [IRC channel](https://webchat.snoonet.org/#gonzobot-dev) and we will be happy to assist you.
 
 To write your own plugins, visit the [Plugins Wiki Page](https://github.com/CloudBotIRC/CloudBot/wiki/Writing-your-first-command-plugin).
 
@@ -49,13 +50,9 @@ More at the [Wiki Main Page](https://github.com/CloudBotIRC/CloudBot/wiki).
 
 ### Support
 
-The developers reside in [#CloudBot](irc://irc.esper.net/cloudbot) on [EsperNet](http://esper.net) and would be glad to help you.
+The developers reside in [#gonzobot-dev](https://webchat.snoonet.org/#gonzobot-dev) on [Snoonet](https://snoonet.org) and would be glad to help you.
 
 If you think you have found a bug/have a idea/suggestion, please **open a issue** here on Github and contact us on IRC!
-
-## Example CloudBots
-
-You can find a number of example bots in [#CloudBot](irc://irc.esper.net/cloudbot "Connect via IRC to #CloudBot on irc.esper.net").
 
 ## Changelog
 

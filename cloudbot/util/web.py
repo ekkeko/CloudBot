@@ -14,17 +14,18 @@ License:
 """
 
 import json
+import logging
 
 import requests
-# Constants
 from requests import RequestException
 
+# Constants
 DEFAULT_SHORTENER = 'is.gd'
-DEFAULT_PASTEBIN = 'snoonet'
+DEFAULT_PASTEBIN = 'hastebin'
 
 HASTEBIN_SERVER = 'https://hastebin.com'
 
-SNOONET_PASTE = 'https://paste.snoonet.org'
+logger = logging.getLogger('cloudbot')
 
 
 # Shortening / pasting
@@ -59,8 +60,20 @@ def expand(url, service=None):
 
 
 def paste(data, ext='txt', service=DEFAULT_PASTEBIN):
-    impl = pastebins[service]
-    return impl.paste(data, ext)
+    bins = pastebins.copy()
+    impl = bins.pop(service, None)
+    while impl:
+        try:
+            return impl.paste(data, ext)
+        except ServiceError:
+            logger.exception("Paste failed")
+
+        try:
+            _, impl = bins.popitem()
+        except LookupError:
+            impl = None
+
+    return "Unable to paste data"
 
 
 class ServiceError(Exception):
@@ -96,8 +109,8 @@ class Shortener:
 
         if 'location' in r.headers:
             return r.headers['location']
-        else:
-            raise ServiceError('That URL does not exist', r)
+
+        raise ServiceError('That URL does not exist', r)
 
 
 class Pastebin:
@@ -143,8 +156,8 @@ class Isgd(Shortener):
 
         if 'shorturl' in j:
             return j['shorturl']
-        else:
-            raise ServiceError(j['errormessage'], r)
+
+        raise ServiceError(j['errormessage'], r)
 
     def expand(self, url):
         p = {'shorturl': url, 'format': 'json'}
@@ -159,8 +172,8 @@ class Isgd(Shortener):
 
         if 'url' in j:
             return j['url']
-        else:
-            raise ServiceError(j['errormessage'], r)
+
+        raise ServiceError(j['errormessage'], r)
 
 
 @_shortener('goo.gl')
@@ -180,8 +193,8 @@ class Googl(Shortener):
 
         if 'error' not in j:
             return j['id']
-        else:
-            raise ServiceError(j['error']['message'], r)
+
+        raise ServiceError(j['error']['message'], r)
 
     def expand(self, url):
         p = {'shortUrl': url}
@@ -196,8 +209,8 @@ class Googl(Shortener):
 
         if 'error' not in j:
             return j['longUrl']
-        else:
-            raise ServiceError(j['error']['message'], r)
+
+        raise ServiceError(j['error']['message'], r)
 
 
 @_shortener('git.io')
@@ -215,10 +228,10 @@ class Gitio(Shortener):
             s = r.headers['location']
             if custom and custom not in s:
                 raise ServiceError('That URL is already in use', r)
-            else:
-                return s
-        else:
-            raise ServiceError(r.text, r)
+
+            return s
+
+        raise ServiceError(r.text, r)
 
 
 @_pastebin('hastebin')
@@ -235,22 +248,5 @@ class Hastebin(Pastebin):
 
             if r.status_code is requests.codes.ok:
                 return '{}/{}.{}'.format(HASTEBIN_SERVER, j['key'], ext)
-            else:
-                raise ServiceError(j['message'], r)
 
-
-@_pastebin('snoonet')
-class SnoonetPaste(Pastebin):
-    def paste(self, data, ext):
-        params = {
-            'text': data,
-            'expire': '1d'
-        }
-        r = requests.post(SNOONET_PASTE + '/paste/new', data=params)
-        try:
-            r.raise_for_status()
-        except RequestException as e:
-            r = e.response
-            raise ServiceError(r.reason, r)
-        else:
-            return '{}'.format(r.url)
+            raise ServiceError(j['message'], r)

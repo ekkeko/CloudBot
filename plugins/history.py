@@ -1,4 +1,3 @@
-import asyncio
 import re
 import time
 from collections import deque
@@ -76,9 +75,9 @@ def chat_tracker(event, db, conn):
 
 
 @hook.command(autohelp=False)
-@asyncio.coroutine
-def resethistory(event, conn):
+async def resethistory(event, conn):
     """- resets chat history for the current channel
+
     :type event: cloudbot.event.Event
     :type conn: cloudbot.client.Client
     """
@@ -93,6 +92,7 @@ def resethistory(event, conn):
 @hook.command()
 def seen(text, nick, chan, db, event, is_nick_valid):
     """<nick> <channel> - tells when a nickname was last in active in one of my channels
+
     :type db: sqlalchemy.orm.Session
     :type event: cloudbot.event.Event
     """
@@ -115,7 +115,7 @@ def seen(text, nick, chan, db, event, is_nick_valid):
         reltime = timeformat.time_since(last_seen[1])
         if last_seen[2][0:1] == "\x01":
             return '{} was last seen {} ago: * {} {}'.format(text, reltime, text, last_seen[2][8:-1])
-        else:
-            return '{} was last seen {} ago saying: {}'.format(text, reltime, last_seen[2])
-    else:
-        return "I've never seen {} talking in this channel.".format(text)
+
+        return '{} was last seen {} ago saying: {}'.format(text, reltime, last_seen[2])
+
+    return "I've never seen {} talking in this channel.".format(text)

@@ -10,6 +10,7 @@ from cloudbot.util.formatting import gen_markdown_table
 
 # below is the default factoid in every channel you can modify it however you like
 default_dict = {"commands": "https://snoonet.org/gonzobot"}
+factoid_cache = defaultdict(default_dict.copy)
 
 re_lineends = re.compile(r'[\r\n]*')
 
@@ -31,14 +32,16 @@ def load_cache(db):
     """
     :type db: sqlalchemy.orm.Session
     """
-    global factoid_cache
-    factoid_cache = defaultdict(default_dict.copy)
+    new_cache = defaultdict(default_dict.copy)
     for row in db.execute(table.select()):
         # assign variables
         chan = row["chan"]
         word = row["word"]
         data = row["data"]
-        factoid_cache[chan][word] = data
+        new_cache[chan][word] = data
+
+    factoid_cache.clear()
+    factoid_cache.update(new_cache)
 
 
 def add_factoid(db, word, chan, data, nick):
@@ -71,13 +74,13 @@ def del_factoid(db, chan, word):
 
 
 @hook.command("r", "remember", permissions=["op", "chanop"])
-def remember(text, nick, db, chan, notice):
+def remember(text, nick, db, chan, notice, event):
     """<word> [+]<data> - remembers <data> with <word> - add + to <data> to append. If the input starts with <act> the message will be sent as an action. If <user> in in the message it will be replaced by input arguments when command is called."""
-    global factoid_cache
     try:
         word, data = text.split(None, 1)
     except ValueError:
-        return remember.__doc__
+        event.notice_doc()
+        return
 
     word = word.lower()
     try:
@@ -105,16 +108,15 @@ def remember(text, nick, db, chan, notice):
 @hook.command("f", "forget", permissions=["op", "chanop"])
 def forget(text, chan, db, notice):
     """<word> - forgets previously remembered <word>"""
-    global factoid_cache
     data = factoid_cache[chan][text.lower()]
 
     if data:
         del_factoid(db, chan, text)
         notice('"{}" has been forgotten.'.format(data.replace('`', "'")))
         return
-    else:
-        notice("I don't know about that.")
-        return
+
+    notice("I don't know about that.")
+    return
 
 
 @hook.command()
@@ -179,5 +181,5 @@ def listdetailedfactoids(chan):
     """- lists all available factoids with their respective data"""
     headers = ("Command", "Output")
     data = [(FACTOID_CHAR + fact[0], fact[1]) for fact in sorted(factoid_cache[chan].items())]
-    table = gen_markdown_table(headers, data).encode('UTF-8')
-    return web.paste(table, "md", "hastebin")
+    tbl = gen_markdown_table(headers, data).encode('UTF-8')
+    return web.paste(tbl, 'md', 'hastebin')

@@ -9,12 +9,12 @@ HIST_API = "http://api.fishbans.com/history/{}"
 UUID_API = "http://api.goender.net/api/uuids/{}/"
 
 
-def get_name(uuid):
+def get_name(user_uuid):
     # submit the profile request
-    request = requests.get(UUID_API.format(uuid))
+    request = requests.get(UUID_API.format(user_uuid))
     request.raise_for_status()
     data = request.json()
-    return data[uuid]
+    return data[user_uuid]
 
 
 @hook.command("mcuser", "mcpaid", "haspaid")
@@ -25,7 +25,7 @@ def mcuser(text, bot, reply):
 
     # check if we are looking up a UUID
     cleaned = text.replace('-', '')
-    if re.search(r'^[0-9a-f]{32}\Z$', cleaned, re.I):
+    if re.search(r'^[0-9a-f]{32}$', cleaned, re.I):
         # we are looking up a UUID, get a name.
         try:
             name = get_name(cleaned)
@@ -53,8 +53,8 @@ def mcuser(text, bot, reply):
     if not results['success']:
         if results['error'] == "User is not premium.":
             return "The account \x02{}\x02 is not premium or does not exist.".format(text)
-        else:
-            return results['error']
+
+        return results['error']
 
     username = results['data']['username']
     uid = uuid.UUID(results['data']['uuid'])

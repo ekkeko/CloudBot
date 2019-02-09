@@ -16,6 +16,7 @@ table = Table(
 # If True, all channels without a setting will have regex enabled
 # If False, all channels without a setting will have regex disabled
 default_enabled = True
+status_cache = {}
 
 
 @hook.on_start()
@@ -23,13 +24,15 @@ def load_cache(db):
     """
     :type db: sqlalchemy.orm.Session
     """
-    global status_cache
-    status_cache = {}
+    new_cache = {}
     for row in db.execute(table.select()):
         conn = row["connection"]
         chan = row["channel"]
         status = row["status"]
-        status_cache[(conn, chan)] = status
+        new_cache[(conn, chan)] = status
+
+    status_cache.clear()
+    status_cache.update(new_cache)
 
 
 def set_status(db, conn, chan, status):
@@ -66,8 +69,7 @@ def sieve_regex(bot, event, _hook):
     return event
 
 
-@hook.command(autohelp=False, permissions=["botcontrol"])
-def enableregex(text, db, conn, chan, nick, message, notice):
+def change_status(text, chan, nick, db, conn, message, notice, status):
     text = text.strip().lower()
     if not text:
         channel = chan
@@ -76,26 +78,26 @@ def enableregex(text, db, conn, chan, nick, message, notice):
     else:
         channel = "#{}".format(text)
 
-    message("Enabling regex matching (youtube, etc) (issued by {})".format(nick), target=channel)
-    notice("Enabling regex matching (youtube, etc) in channel {}".format(channel))
-    set_status(db, conn.name, channel, "ENABLED")
+    action = "Enabling" if status else "Disabling"
+    message(
+        "{} regex matching (youtube, etc) (issued by {})".format(action, nick),
+        target=channel
+    )
+    notice("{} regex matching (youtube, etc) in channel {}".format(
+        action, channel
+    ))
+    set_status(db, conn.name, channel, "ENABLED" if status else "DISABLED")
     load_cache(db)
+
+
+@hook.command(autohelp=False, permissions=["botcontrol"])
+def enableregex(text, db, conn, chan, nick, message, notice):
+    return change_status(text, chan, nick, db, conn, message, notice, True)
 
 
 @hook.command(autohelp=False, permissions=["botcontrol"])
 def disableregex(text, db, conn, chan, nick, message, notice):
-    text = text.strip().lower()
-    if not text:
-        channel = chan
-    elif text.startswith("#"):
-        channel = text
-    else:
-        channel = "#{}".format(text)
-
-    message("Disabling regex matching (youtube, etc) (issued by {})".format(nick), target=channel)
-    notice("Disabling regex matching (youtube, etc) in channel {}".format(channel))
-    set_status(db, conn.name, channel, "DISABLED")
-    load_cache(db)
+    return change_status(text, chan, nick, db, conn, message, notice, False)
 
 
 @hook.command(autohelp=False, permissions=["botcontrol"])

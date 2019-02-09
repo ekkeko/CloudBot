@@ -34,13 +34,16 @@ def load_cache(db):
     """
     :type db: sqlalchemy.orm.Session
     """
+    new_cache = {}
+    for row in db.execute(table.select().order_by(table.c.time)):
+        name = row["name"].lower()
+        quote = row["quote"]
+        chan = row["chan"]
+        new_cache.setdefault(chan, {}).setdefault(name, []).append(quote)
+
     with cache_lock:
         grab_cache.clear()
-        for row in db.execute(table.select().order_by(table.c.time)):
-            name = row["name"].lower()
-            quote = row["quote"]
-            chan = row["chan"]
-            grab_cache.setdefault(chan, {}).setdefault(name, []).append(quote)
+        grab_cache.update(new_cache)
 
 
 @hook.command("moregrab", autohelp=False)
@@ -59,22 +62,22 @@ def moregrab(text, chan, conn):
         page = pages[index - 1]
         if page is None:
             return "Please specify a valid page number between 1 and {}.".format(len(pages))
-        else:
-            return page
-    else:
-        page = pages.next()
-        if page is not None:
-            return page
-        else:
-            return "All pages have been shown you can specify a page number or do a new search."
+
+        return page
+
+    page = pages.next()
+    if page is not None:
+        return page
+
+    return "All pages have been shown you can specify a page number or do a new search."
 
 
 def check_grabs(name, quote, chan):
     try:
         if quote in grab_cache[chan][name]:
             return True
-        else:
-            return False
+
+        return False
     except KeyError:
         return False
 
@@ -119,8 +122,8 @@ def grab(text, nick, chan, db, conn):
 
         if check_grabs(name.casefold(), msg, chan):
             return "the operation succeeded."
-        else:
-            return "the operation failed"
+
+        return "the operation failed"
 
 
 def format_grab(name, quote):
@@ -130,9 +133,9 @@ def format_grab(name, quote):
         quote = quote.replace("\x01ACTION", "").replace("\x01", "")
         out = "* {}{}".format(name, quote)
         return out
-    else:
-        out = "<{}> {}".format(name, quote)
-        return out
+
+    out = "<{}> {}".format(name, quote)
+    return out
 
 
 @hook.command("lastgrab", "lgrab")

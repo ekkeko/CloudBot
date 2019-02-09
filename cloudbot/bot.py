@@ -8,11 +8,11 @@ import re
 import time
 from functools import partial
 from pathlib import Path
+from typing import Type
 
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
-from sqlalchemy.schema import MetaData
 from watchdog.observers import Observer
 
 from cloudbot.client import Client, CLIENTS
@@ -32,6 +32,31 @@ except ImportError:
     web_installed = False
 
 logger = logging.getLogger("cloudbot")
+
+
+class BotInstanceHolder:
+    def __init__(self):
+        self._instance = None
+
+    def get(self):
+        # type: () -> CloudBot
+        return self._instance
+
+    def set(self, value):
+        # type: (CloudBot) -> None
+        self._instance = value
+
+    @property
+    def config(self):
+        # type: () -> Config
+        if not self.get():
+            raise ValueError("No bot instance available")
+
+        return self.get().config
+
+
+# Store a global instance of the bot to allow easier access to global data
+bot = BotInstanceHolder()
 
 
 def clean_name(n):
@@ -84,6 +109,10 @@ class CloudBot:
     """
 
     def __init__(self, loop=asyncio.get_event_loop()):
+        if bot.get():
+            raise ValueError("There seems to already be a bot running!")
+
+        bot.set(self)
         # basic variables
         self.base_dir = Path().resolve()
         self.loop = loop
@@ -125,7 +154,7 @@ class CloudBot:
         self.db_engine = create_engine(db_path)
         self.db_factory = sessionmaker(bind=self.db_engine)
         self.db_session = scoped_session(self.db_factory)
-        self.db_metadata = MetaData()
+        self.db_metadata = database.metadata
         self.db_base = declarative_base(metadata=self.db_metadata, bind=self.db_engine)
 
         # create web interface
@@ -133,7 +162,6 @@ class CloudBot:
             self.web = WebInterface(self)
 
         # set botvars so plugins can access when loading
-        database.metadata = self.db_metadata
         database.base = self.db_base
 
         logger.debug("Database system initialised.")
@@ -174,6 +202,9 @@ class CloudBot:
         self.loop.close()
         return restart
 
+    def get_client(self, name: str) -> Type[Client]:
+        return CLIENTS[name]
+
     def create_connections(self):
         """ Create a BotConnection for all the networks defined in the config """
         for config in self.config['connections']:
@@ -182,11 +213,10 @@ class CloudBot:
             nick = config['nick']
             _type = config.get("type", "irc")
 
-            self.connections[name] = CLIENTS[_type](self, name, nick, config=config, channels=config['channels'])
+            self.connections[name] = self.get_client(_type)(self, name, nick, config=config, channels=config['channels'])
             logger.debug("[{}] Created connection.".format(name))
 
-    @asyncio.coroutine
-    def stop(self, reason=None, *, restart=False):
+    async def stop(self, reason=None, *, restart=False):
         """quits all networks and shuts the bot down"""
         logger.info("Stopping bot.")
 
@@ -216,7 +246,7 @@ class CloudBot:
         logger.debug("Done.")
 
         logger.debug("Sleeping to let clients quit")
-        yield from asyncio.sleep(1.0)  # wait for 'QUIT' calls to take affect
+        await asyncio.sleep(1.0)  # wait for 'QUIT' calls to take affect
         logger.debug("Sleep done.")
 
         logger.debug("Closing clients")
@@ -230,15 +260,13 @@ class CloudBot:
         logger.debug("Setting future result for shutdown")
         self.stopped_future.set_result(restart)
 
-    @asyncio.coroutine
-    def restart(self, reason=None):
+    async def restart(self, reason=None):
         """shuts the bot down and restarts it"""
-        yield from self.stop(reason=reason, restart=True)
+        await self.stop(reason=reason, restart=True)
 
-    @asyncio.coroutine
-    def _init_routine(self):
+    async def _init_routine(self):
         # Load plugins
-        yield from self.plugin_manager.load_all(os.path.abspath("plugins"))
+        await self.plugin_manager.load_all(os.path.abspath("plugins"))
 
         # If we we're stopped while loading plugins, cancel that and just stop
         if not self.running:
@@ -258,7 +286,7 @@ class CloudBot:
             conn.active = True
 
         # Connect to servers
-        yield from asyncio.gather(*[conn.try_connect() for conn in self.connections.values()], loop=self.loop)
+        await asyncio.gather(*[conn.try_connect() for conn in self.connections.values()], loop=self.loop)
         logger.debug("Connections created.")
 
         # Activate web interface.
@@ -278,8 +306,7 @@ class CloudBot:
             mod_path = '.'.join(rel_path.parts).rsplit('.', 1)[0]
             importlib.import_module(mod_path)
 
-    @asyncio.coroutine
-    def process(self, event):
+    async def process(self, event):
         """
         :type event: Event
         """
@@ -304,8 +331,10 @@ class CloudBot:
             if hook.action is Action.HALTALL:
                 halted = True
                 return False
-            elif hook.action is Action.HALTTYPE:
+
+            if hook.action is Action.HALTTYPE:
                 return False
+
             return True
 
         # Raw IRC hook
@@ -384,5 +413,5 @@ class CloudBot:
                         break
 
         # Run the tasks
-        yield from asyncio.gather(*run_before_tasks, loop=self.loop)
-        yield from asyncio.gather(*tasks, loop=self.loop)
+        await asyncio.gather(*run_before_tasks, loop=self.loop)
+        await asyncio.gather(*tasks, loop=self.loop)

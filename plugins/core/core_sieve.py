@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from time import time
 
@@ -10,32 +9,15 @@ buckets = {}
 logger = logging.getLogger("cloudbot")
 
 
-def task_clear(loop):
-    global buckets
+@hook.periodic(600)
+def task_clear():
     for uid, _bucket in buckets.copy().items():
         if (time() - _bucket.timestamp) > 600:
             del buckets[uid]
-    loop.call_later(600, task_clear, loop)
-
-
-@hook.irc_raw('004')
-@asyncio.coroutine
-def init_tasks(loop, conn):
-    global ready
-    if ready:
-        # tasks already started
-        return
-
-    logger.info("[{}|sieve] Bot is starting ratelimiter cleanup task.".format(conn.name))
-    loop.call_later(600, task_clear, loop)
-    ready = True
 
 
 @hook.sieve(priority=100)
-@asyncio.coroutine
-def sieve_suite(bot, event, _hook):
-    global buckets
-
+async def sieve_suite(bot, event, _hook):
     conn = event.conn
 
     # check acls
@@ -61,7 +43,7 @@ def sieve_suite(bot, event, _hook):
     if allowed_permissions:
         allowed = False
         for perm in allowed_permissions:
-            if (yield from event.check_permission(perm)):
+            if await event.check_permission(perm):
                 allowed = True
                 break
 

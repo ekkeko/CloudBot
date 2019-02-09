@@ -1,4 +1,3 @@
-import asyncio
 import os
 import signal
 import sys
@@ -24,6 +23,16 @@ except ImportError:
 
 from cloudbot import hook
 from cloudbot.util import web
+
+
+def create_tracker():
+    if pympler is None:
+        return None
+
+    return pympler.tracker.SummaryTracker()
+
+
+tr = create_tracker()
 
 
 def get_name(thread_id):
@@ -65,8 +74,7 @@ def get_thread_dump():
 
 
 @hook.command("threaddump", autohelp=False, permissions=["botcontrol"])
-@asyncio.coroutine
-def threaddump_command():
+async def threaddump_command():
     return get_thread_dump()
 
 
@@ -94,14 +102,6 @@ def pympler_summary():
     summ = pympler.summary.summarize(all_objects)
     pympler.summary.print_(summ)
     return "Printed to console"
-
-
-@hook.on_start()
-def create_tracker():
-    if pympler is None:
-        return
-    global tr
-    tr = pympler.tracker.SummaryTracker()
 
 
 @hook.command("pymdiff", autohelp=False, permissions=["botcontrol"])

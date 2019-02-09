@@ -1,6 +1,4 @@
-import asyncio
-from fnmatch import fnmatch
-
+from irclib.util.compare import match_mask
 from sqlalchemy import Table, Column, UniqueConstraint, PrimaryKeyConstraint, String, Boolean
 
 from cloudbot import hook
@@ -17,19 +15,23 @@ table = Table(
     PrimaryKeyConstraint("connection", "channel", "mask")
 )
 
+ignore_cache = []
+
 
 @hook.on_start
 def load_cache(db):
     """
     :type db: sqlalchemy.orm.Session
     """
-    global ignore_cache
-    ignore_cache = []
+    new_cache = []
     for row in db.execute(table.select()):
         conn = row["connection"]
         chan = row["channel"]
         mask = row["mask"]
-        ignore_cache.append((conn, chan, mask))
+        new_cache.append((conn, chan, mask))
+
+    ignore_cache.clear()
+    ignore_cache.extend(new_cache)
 
 
 def add_ignore(db, conn, chan, mask):
@@ -55,20 +57,19 @@ def is_ignored(conn, chan, mask):
         _mask_cf = _mask.casefold()
         if _chan == "*":
             # this is a global ignore
-            if fnmatch(mask_cf, _mask_cf):
+            if match_mask(mask_cf, _mask_cf):
                 return True
         else:
             # this is a channel-specific ignore
-            if not (conn, chan) == (_conn, _chan):
+            if (conn, chan) != (_conn, _chan):
                 continue
-            if fnmatch(mask_cf, _mask_cf):
+            if match_mask(mask_cf, _mask_cf):
                 return True
 
 
 # noinspection PyUnusedLocal
 @hook.sieve(priority=50)
-@asyncio.coroutine
-def ignore_sieve(bot, event, _hook):
+async def ignore_sieve(bot, event, _hook):
     """
     :type bot: cloudbot.bot.CloudBot
     :type event: cloudbot.event.Event

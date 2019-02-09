@@ -76,6 +76,12 @@
             "command_prefix": "."
         }
     ],
+    "plugins": {
+        "duckhunt": {
+            "minimum_messages": 10,
+            "minimum_users": 5
+        }
+    },
     "api_keys": {
         "tvdb": "",
         "bing_azure": "",
@@ -91,7 +97,7 @@
         "imgur_client_secret": "",
         "spotify_client_id": "",
         "spotify_client_secret": "",
-        "wunderground": "",
+        "darksky": "",
         "rdio_key": "",
         "rdio_secret": "",
         "google_dev_key": "",
@@ -121,6 +127,7 @@
         "config_reloading": true,
         "plugin_reloading": false
     },
+    "repo_link": "https://github.com/snoonetIRC/CloudBot/",
     "logging": {
         "console_debug": false,
         "file_debug": false,

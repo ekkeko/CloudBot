@@ -5,26 +5,32 @@ import asyncio
 import importlib
 import inspect
 import re
+from collections import OrderedDict
 from numbers import Number
 from pathlib import Path
 
-from sqlalchemy import MetaData
-
+import cloudbot.bot
 from cloudbot.event import Event, CommandEvent, RegexEvent, CapEvent, PostHookEvent, IrcOutEvent
 from cloudbot.hook import Action
 from cloudbot.plugin import Plugin, Hook
-from cloudbot.util import database
 
-database.metadata = MetaData()
 Hook.original_init = Hook.__init__
 
 DOC_RE = re.compile(r"^(?:(?:<.+?>|{.+?}|\[.+?\]).+?)*?-\s.+$")
 PLUGINS = []
 
 
+class MockConfig(OrderedDict):
+    def get_api_key(self, name, default=None):  # pylint: disable=locally-disabled, no-self-use, unused-argument
+        return default
+
+
 class MockBot:
+    loop = None
+    user_agent = None
+
     def __init__(self):
-        self.loop = None
+        self.config = MockConfig()
 
 
 def patch_hook_init(self, _type, plugin, func_hook):
@@ -58,7 +64,9 @@ def load_plugin(plugin_path):
 
 def get_plugins():
     if not PLUGINS:
+        cloudbot.bot.bot.set(MockBot())
         PLUGINS.extend(map(load_plugin, gather_plugins()))
+        cloudbot.bot.bot.set(None)
 
     return PLUGINS
 
@@ -111,6 +119,14 @@ def test_hook_doc(hook):
     if hook.type == "command" and hook.doc:
         assert DOC_RE.match(hook.doc), \
             "Invalid docstring '{}' format for command hook".format(hook.doc)
+
+        found_blank = False
+        for line in hook.function.__doc__.strip().splitlines():
+            stripped = line.strip()
+            if stripped.startswith(':'):
+                assert found_blank
+            elif not stripped:
+                found_blank = True
 
 
 def test_hook_args(hook):
