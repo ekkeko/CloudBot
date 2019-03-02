@@ -187,6 +187,8 @@ def ytplaylist_url(match, reply):
 def tocaraul(bot):
     songlist = ['tente outra vez', 'metamorfose ambulante', 'maluco beleza', 'gita', 'ouro de tolo', 'meu amigo pedro', 'medo da chuva', 'vampiro doidão', 'prelúdio', 'eu nasci há dez mil anos atrás', 'cowboy fora da lei', 'canto para a minha morte', 'a maçã', 'sociedade alternativa', 'o trem das 7', 'eu também vou reclamar', 'capim guiné', 'carimbador maluco', 'disco voador', 'tu és o mdc da minha vida']
     """youtube <query> -- Returns the first YouTube search result for <query>."""
+
+    dev_key = bot.config.get_api_key("google_dev_key")
     if not dev_key:
         return "This command requires a Google Developers Console API key."
 
