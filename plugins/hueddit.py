@@ -99,3 +99,12 @@ def random_duck_search():
     except praw.exceptions.PRAWException as e:
         return e
     return get_displayline(subm)
+
+@hook.command('oinc')
+def random_pig_search():
+    sub = random.choice(['pigs', 'babypigs', 'pigtures', 'pigifs'])
+    try:
+        subm = get_image(sub)
+    except praw.exceptions.PRAWException as e:
+        return e
+    return get_displayline(subm)
