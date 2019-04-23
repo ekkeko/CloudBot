@@ -45,7 +45,6 @@ License for final section (all code after the "DJANGO LICENCE" comment):
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import copy
-import html.entities
 import re
 import warnings
 from html.parser import HTMLParser
@@ -126,14 +125,6 @@ class HTMLTextExtractor(HTMLParser):
     def handle_data(self, d):
         self.result.append(d)
 
-    def handle_charref(self, number):
-        codepoint = int(number[1:], 16) if number[0] in ('x', 'X') else int(number)
-        self.result.append(chr(codepoint))
-
-    def handle_entityref(self, name):
-        codepoint = html.entities.name2codepoint[name]
-        self.result.append(chr(codepoint))
-
     def get_text(self):
         return ''.join(self.result)
 
@@ -211,7 +202,7 @@ def truncate_words(content, length=10, suffix='...'):
     return " ".join(split[:length]) + suffix
 
 
-def truncate(content, length=100, suffix='...'):
+def truncate(content, length=100, suffix='...', sep=' '):
     """
     Truncates a string after a certain number of characters.
     Function always tries to truncate on a word boundary.
@@ -220,7 +211,7 @@ def truncate(content, length=100, suffix='...'):
     if len(content) <= length:
         return content
 
-    return content[:length].rsplit(' ', 1)[0] + suffix
+    return content[:length].rsplit(sep, 1)[0] + suffix
 
 
 # compatibility
@@ -243,7 +234,7 @@ def chunk_str(content, length=420):
     return list(chunk(content, length))
 
 
-def pluralize(num=0, text=''):
+def pluralize(num=0, text=''):  # pragma: no cover
     """
     Takes a number and a string, and pluralizes that string using the number and combines the results.
     :rtype: str
@@ -255,7 +246,7 @@ def pluralize(num=0, text=''):
     return pluralize_suffix(num, text)
 
 
-def pluralise(num=0, text=''):
+def pluralise(num=0, text=''):  # pragma: no cover
     """
     Takes a number and a string, and pluralizes that string using the number and combines the results.
     :rtype: str
@@ -286,6 +277,12 @@ pluralise_select = pluralize_select
 
 
 def pluralize_auto(count, thing):
+    if thing.endswith('us'):
+        return pluralize_select(count, thing, thing[:-2] + 'i')
+
+    if thing.endswith('is'):
+        return pluralize_select(count, thing, thing[:-2] + 'es')
+
     if thing.endswith(('s', 'ss', 'sh', 'ch', 'x', 'z')):
         return pluralize_suffix(count, thing, 'es')
 
@@ -300,12 +297,6 @@ def pluralize_auto(count, thing):
 
     if thing.endswith('o'):
         return pluralize_suffix(count, thing, 'es')
-
-    if thing.endswith('us'):
-        return pluralize_select(count, thing, thing[:-2] + 'i')
-
-    if thing.endswith('is'):
-        return pluralize_select(count, thing, thing[:-2] + 'es')
 
     if thing.endswith('on'):
         return pluralize_select(count, thing, thing[:-2] + 'a')
@@ -329,14 +320,14 @@ def dict_format(args, formats):
             m = f.format(**args)
             # Insert match and number of matched values (max matched values if already in dict)
             matches[m] = max([matches.get(m, 0), len(re.findall(r'({.*?\})', f))])
-        except Exception:
+        except KeyError:
             continue
 
     # Return most complete match, ranked by values matched and then my match length or None
-    try:
-        return max(matches.items(), key=lambda x: (x[1], len(x[0])))[0]
-    except Exception:
+    if not matches:
         return None
+
+    return max(matches.items(), key=lambda x: (x[1], len(x[0])))[0]
 
 
 # DJANGO LICENCE
@@ -346,18 +337,18 @@ split_re = re.compile(r"""((?:[^\s'"]*(?:(?:"(?:[^"\\]|\\.)*" | '(?:["""
 
 
 def smart_split(text):
-    """
+    r"""
     Generator that splits a string by spaces, leaving quoted phrases together.
     Supports both single and double quotes, and supports escaping quotes with
     backslashes. In the output, strings will keep their initial and trailing
     quote marks and escaped quotes will remain escaped (the results can then
     be further processed with unescape_string_literal()).
 
-    >> list(smart_split(r'This is "a person\'s" test.'))
+    >>> list(smart_split(r'This is "a person\'s" test.'))
     ['This', 'is', '"a person\\\'s"', 'test.']
-    >> list(smart_split(r"Another 'person\'s' test."))
+    >>> list(smart_split(r"Another 'person\'s' test."))
     ['Another', "'person\\'s'", 'test.']
-    >> list(smart_split(r'A "\"funky\" style" test.'))
+    >>> list(smart_split(r'A "\"funky\" style" test.'))
     ['A', '"\\"funky\\" style"', 'test.']
     """
     for bit in split_re.finditer(text):
@@ -366,15 +357,15 @@ def smart_split(text):
 
 def get_text_list(list_, last_word='or'):
     """
-    >> get_text_list(['a', 'b', 'c', 'd'])
+    >>> get_text_list(['a', 'b', 'c', 'd'])
     'a, b, c or d'
-    >> get_text_list(['a', 'b', 'c'], 'and')
+    >>> get_text_list(['a', 'b', 'c'], 'and')
     'a, b and c'
-    >> get_text_list(['a', 'b'], 'and')
+    >>> get_text_list(['a', 'b'], 'and')
     'a and b'
-    >> get_text_list(['a'])
+    >>> get_text_list(['a'])
     'a'
-    >> get_text_list([])
+    >>> get_text_list([])
     ''
     """
     if not list_:

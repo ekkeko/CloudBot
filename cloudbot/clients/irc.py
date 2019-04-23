@@ -155,10 +155,10 @@ class IrcClient(Client):
     async def _connect(self, timeout=None):
         # connect to the clients server
         if self.connected:
-            logger.info("[{}] Reconnecting".format(self.name))
+            logger.info("[%s] Reconnecting", self.name)
             self.quit("Reconnecting...")
         else:
-            logger.info("[{}] Connecting".format(self.name))
+            logger.info("[%s] Connecting", self.name)
 
         self._active = True
 
@@ -324,7 +324,7 @@ class _IrcProtocol(asyncio.Protocol):
     def connection_lost(self, exc):
         self._connected = False
         if exc:
-            logger.error("[{}] Connection lost: {}".format(self.conn.name, exc))
+            logger.error("[%s] Connection lost: %s", self.conn.name, exc)
 
         async_util.wrap_future(self.conn.auto_reconnect(), loop=self.loop)
 
@@ -382,7 +382,7 @@ class _IrcProtocol(asyncio.Protocol):
             line = line.encode("utf-8", "replace")
 
         if log:
-            logger.info("[{}|out] >> {!r}".format(self.conn.name, line))
+            logger.info("[%s|out] >> %r", self.conn.name, line)
 
         self._transport.write(line)
 
@@ -421,10 +421,9 @@ class _IrcProtocol(asyncio.Protocol):
                 content = None
 
             # Event type
-            if command in irc_command_to_event_type:
-                event_type = irc_command_to_event_type[command]
-            else:
-                event_type = EventType.other
+            event_type = irc_command_to_event_type.get(
+                command, EventType.other
+            )
 
             # Target (for KICK, INVITE)
             if event_type is EventType.kick:

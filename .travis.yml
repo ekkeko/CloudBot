@@ -5,7 +5,14 @@ python:
   - "3.5"
   - "3.6"
   - "3.7"
+  - "3.8-dev"
   - "pypy3.5"
+
+branches:
+  only:
+  - gonzobot
+  # Allow tagged releases in the format v1.0
+  - /^v\d+\.\d+.*$/
 
 cache: pip
 
@@ -15,12 +22,10 @@ install:
   - "pip install -r ./travis/requirements.txt"
 
 script:
-  - "py.test -v"
+  - "pytest"
 
 after_success:
-  - 'coverage xml'
-  - 'coveralls'
-  - 'python-codacy-coverage -r coverage.xml'
+  - codecov
 
 env:
   - PYTHONPATH=.

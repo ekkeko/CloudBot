@@ -1,13 +1,10 @@
 import datetime
 
 import requests
-from lxml import etree
 
 from cloudbot import hook
 from cloudbot.bot import bot
-
-# security
-parser = etree.XMLParser(resolve_entities=False, no_network=True)
+from cloudbot.util.http import parse_xml
 
 base_url = "http://thetvdb.com/api/"
 
@@ -24,7 +21,7 @@ def get_episodes_for_series(series_name, api_key):
         res["error"] = "error contacting thetvdb.com"
         return res
 
-    query = etree.fromstring(request.content, parser=parser)
+    query = parse_xml(request.content)
     series_id = query.xpath('//seriesid/text()')
 
     if not series_id:
@@ -40,11 +37,12 @@ def get_episodes_for_series(series_name, api_key):
         res["error"] = "error contacting thetvdb.com"
         return res
 
-    series = etree.fromstring(_request.content, parser=parser)
+    series = parse_xml(_request.content)
     try:
         series_name = series.xpath('//SeriesName/text()')[0]
     except LookupError:
         series_name = series.xpath('//SeriesName/text()')
+
     try:
         if series.xpath('//Status/text()')[0] == 'Ended':
             res["ended"] = True
@@ -61,7 +59,7 @@ def get_episode_info(episode):
     first_aired = episode.findtext("FirstAired")
 
     try:
-        air_date = datetime.date(*list(map(int, first_aired.split('-'))))
+        air_date = datetime.datetime.strptime(first_aired, '%Y-%m-%d').date()
     except (ValueError, TypeError):
         return None
 
@@ -77,24 +75,34 @@ def get_episode_info(episode):
     episode_desc = '{}'.format(episode_num)
     if episode_name:
         episode_desc += ' - {}'.format(episode_name)
+
     return first_aired, air_date, episode_desc
+
+
+def get_data(text):
+    api_key = bot.config.get_api_key("tvdb")
+    if api_key is None:
+        return (None, None, None), "error: no api key set"
+
+    data = get_episodes_for_series(text, api_key)
+
+    if data["error"]:
+        return (None, None, None), data["error"]
+
+    series_name = data["name"]
+    ended = data["ended"]
+    episodes = data["episodes"]
+
+    return (series_name, ended, episodes), None
 
 
 @hook.command()
 @hook.command('tv')
 def tv_next(text):
     """<series> - Get the next episode of <series>."""
-    api_key = bot.config.get_api_key("tvdb")
-    if api_key is None:
-        return "error: no api key set"
-    episodes = get_episodes_for_series(text, api_key)
-
-    if episodes["error"]:
-        return episodes["error"]
-
-    series_name = episodes["name"]
-    ended = episodes["ended"]
-    episodes = episodes["episodes"]
+    (series_name, ended, episodes), err = get_data(text)
+    if err:
+        return err
 
     if ended:
         return "{} has ended.".format(series_name)
@@ -125,25 +133,18 @@ def tv_next(text):
     if len(next_eps) == 1:
         return "The next episode of {} airs {}".format(series_name, next_eps[0])
 
-    next_eps = ', '.join(next_eps)
-    return "The next episodes of {}: {}".format(series_name, next_eps)
+    return "The next episodes of {}: {}".format(
+        series_name, ', '.join(next_eps)
+    )
 
 
 @hook.command()
 @hook.command('tv_prev')
 def tv_last(text):
     """<series> - Gets the most recently aired episode of <series>."""
-    api_key = bot.config.get_api_key("tvdb")
-    if api_key is None:
-        return "error: no api key set"
-    episodes = get_episodes_for_series(text, api_key)
-
-    if episodes["error"]:
-        return episodes["error"]
-
-    series_name = episodes["name"]
-    ended = episodes["ended"]
-    episodes = episodes["episodes"]
+    (series_name, ended, episodes), err = get_data(text)
+    if err:
+        return err
 
     prev_ep = None
     today = datetime.date.today()
@@ -164,6 +165,8 @@ def tv_last(text):
 
     if not prev_ep:
         return "There are no previously aired episodes for {}.".format(series_name)
+
     if ended:
         return '{} ended. The last episode aired {}.'.format(series_name, prev_ep)
+
     return "The last episode of {} aired {}.".format(series_name, prev_ep)

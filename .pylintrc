@@ -3,7 +3,7 @@
 # A comma-separated list of package or module names from where C extensions may
 # be loaded. Extensions are loading into the active Python interpreter and may
 # run arbitrary code.
-extension-pkg-whitelist=
+extension-pkg-whitelist=lxml
 
 # Add files or directories to the blacklist. They should be base names, not
 # paths.
@@ -67,10 +67,8 @@ disable=invalid-name,
         too-few-public-methods,
         too-many-return-statements,
         inconsistent-return-statements,
-        anomalous-backslash-in-string,
         redefined-outer-name,
         too-many-branches,
-        unused-variable,
         unused-argument,
         broad-except,
         too-many-instance-attributes,
@@ -83,10 +81,8 @@ disable=invalid-name,
         no-name-in-module,
         superfluous-parens,
         function-redefined,
-        consider-using-in,
         too-many-ancestors,
         arguments-differ,
-        consider-using-get,
         duplicate-string-formatting-argument,
         simplifiable-if-expression,
         implicit-str-concat-in-sequence,
@@ -159,7 +155,7 @@ contextmanager-decorators=contextlib.contextmanager
 # List of members which are set dynamically and missed by pylint inference
 # system, and so shouldn't trigger E1101 when accessed. Python regular
 # expressions are accepted.
-generated-members=
+generated-members=(requests\.)?codes\.[a-zA-Z0-9_]+
 
 # Tells whether missing members accessed in mixin class should be ignored. A
 # mixin class is detected if its name ends with "mixin" (case insensitive).
@@ -369,8 +365,7 @@ notes=FIXME,
 expected-line-ending-format=LF
 
 # Regexp for a line that is allowed to be longer than the limit.
-# Ignore string only lines
-ignore-long-lines=^\s*\".*(\"|$)
+ignore-long-lines=
 
 # Number of spaces of indent required inside a hanging or continued line.
 indent-after-paren=4
@@ -380,7 +375,7 @@ indent-after-paren=4
 indent-string='    '
 
 # Maximum number of characters on a single line.
-max-line-length=176
+max-line-length=120
 
 # Maximum number of lines in a module.
 max-module-lines=1000

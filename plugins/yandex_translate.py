@@ -13,6 +13,9 @@ lang_dir = []
 @hook.on_start()
 def load_key():
     api_key = bot.config.get_api_key("yandex_translate")
+    if not api_key:
+        return
+
     url = api_url + "getLangs"
     params = {
         'key': api_key,
@@ -47,8 +50,12 @@ def check_code(code):
 
 @hook.command("langlist", "tlist", autohelp=False)
 def list_langs():
-    """- List the languages/codes that can be used to translate. Translation is powered by Yandex https://translate.yandex.com"""
+    """- List the languages/codes that can be used to translate. Translation is powered by Yandex
+    https://translate.yandex.com"""
     api_key = bot.config.get_api_key("yandex_translate")
+    if not api_key:
+        return "This command requires a Yandex Translate API key"
+
     url = api_url + "getLangs"
     params = {
         'key': api_key,
@@ -59,7 +66,7 @@ def list_langs():
     data = r.json()
     langs = data['langs']
     out = "Language Codes:"
-    out += ",".join("\n{}-{}".format(key, value) for (key, value) in sorted(langs.items(),))
+    out += ",".join("\n{}-{}".format(key, value) for (key, value) in sorted(langs.items()))
     out += "\n\nTranslation directions:"
     out += ",".join("\n{}".format(code) for code in data['dirs'])
     paste = web.paste(out, ext="txt")
@@ -67,16 +74,27 @@ def list_langs():
 
 
 @hook.command("tran", "translate")
-def trans(text, reply):
-    """<language or language code> - text to translate. Translation is Powered by Yandex https://translate.yandex.com"""
+def trans(text, reply, event):
+    """
+    <language or language code> <text to translate> - Translation is
+    Powered by Yandex https://translate.yandex.com
+    """
     api_key = bot.config.get_api_key("yandex_translate")
+    if not api_key:
+        return "This command requires a Yandex Translate API key"
+
     inp = text.split(' ', 1)
+    if len(inp) < 2:
+        event.notice_doc()
+        return None
+
     lang = inp[0].replace(':', '')
     text = inp[1]
     if lang.title() in lang_dict.keys():
         lang = lang_dict[lang.title()]
     elif lang not in lang_dict.values() and lang not in lang_dir:
-        return "Please specify a valid language, language code, to translate to. Use .langlist for more information on language codes and valid translation directions."
+        return "Please specify a valid language, language code, to translate to. Use .langlist for more information " \
+               "on language codes and valid translation directions."
     url = api_url + "translate"
     params = {
         'key': api_key,

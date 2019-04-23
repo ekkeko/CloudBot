@@ -18,7 +18,9 @@ with open("data/password_words.txt") as f:
 
 @hook.command(autohelp=False)
 def password(text, notice):
-    """[length [types]] - generates a password of <length> (default 12). [types] can include 'alpha', 'no caps', 'numeric', 'symbols' or any combination: eg. 'numbers symbols' (default: alpha numeric no caps)"""
+    """[length [types]] - generates a password of <length> (default 12).
+    [types] can include 'alpha', 'no caps', 'numeric', 'symbols' or any combination: eg. 'numbers symbols'
+    (default: alpha numeric no caps)"""
     okay = ""
 
     # find the length needed for the password
@@ -58,7 +60,7 @@ def password(text, notice):
     gen.shuffle(okay)
     chars = []
 
-    for i in range(length):
+    for _ in range(length):
         chars.append(gen.choice(okay))
 
     notice("".join(chars))
@@ -78,7 +80,7 @@ def word_password(text, notice):
 
     words = []
     # generate password
-    for x in range(length):
+    for _ in range(length):
         words.append(gen.choice(common_words))
 
     notice("Your password is '{}'. Feel free to remove the spaces when using it.".format(" ".join(words)))

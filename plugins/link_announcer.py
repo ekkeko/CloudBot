@@ -1,5 +1,4 @@
 import re
-from contextlib import closing
 
 import requests
 from bs4 import BeautifulSoup
@@ -54,7 +53,8 @@ url_re = re.compile(
 
 HEADERS = {
     'Accept-Language': 'en-US,en;q=0.5',
-    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.116 Safari/537.36'
+    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                  'Chrome/53.0.2785.116 Safari/537.36'
 }
 
 MAX_RECV = 1000000
@@ -89,7 +89,7 @@ def parse_content(content, encoding=None):
 
 @hook.regex(url_re, priority=Priority.LOW, action=Action.HALTTYPE, only_no_match=True)
 def print_url_title(message, match):
-    with closing(requests.get(match.group(), headers=HEADERS, stream=True, timeout=3)) as r:
+    with requests.get(match.group(), headers=HEADERS, stream=True, timeout=3) as r:
         if not r.encoding or not r.ok:
             return
 

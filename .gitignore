@@ -36,6 +36,7 @@ pip-delete-this-directory.txt
 htmlcov/
 .tox/
 .coverage
+.coverage.*
 .cache
 nosetests.xml
 coverage.xml
@@ -58,3 +59,5 @@ config.json
 *.mmdb
 *.log
 .idea/
+/venv/
+.pytest_cache

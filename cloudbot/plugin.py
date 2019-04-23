@@ -3,8 +3,6 @@ import importlib
 import inspect
 import logging
 import sys
-import time
-import warnings
 from collections import defaultdict
 from functools import partial
 from itertools import chain
@@ -31,7 +29,7 @@ def find_hooks(parent, module):
     # set the loaded flag
     module._cloudbot_loaded = True
     hooks = defaultdict(list)
-    for name, func in module.__dict__.items():
+    for func in module.__dict__.values():
         if hasattr(func, "_cloudbot_hook"):
             # if it has cloudbot hook
             func_hooks = func._cloudbot_hook
@@ -51,7 +49,7 @@ def find_tables(code):
     :rtype: list[sqlalchemy.Table]
     """
     tables = []
-    for name, obj in code.__dict__.items():
+    for obj in code.__dict__.values():
         if isinstance(obj, sqlalchemy.Table) and obj.metadata == database.metadata:
             # if it's a Table, and it's using our metadata, append it to the list
             tables.append(obj)
@@ -130,7 +128,7 @@ class PluginManager:
 
     async def unload_all(self):
         await asyncio.gather(
-            *[self.unload_plugin(path) for path in self.plugins.keys()], loop=self.bot.loop
+            *[self.unload_plugin(path) for path in self.plugins], loop=self.bot.loop
         )
 
     async def load_plugin(self, path):
@@ -154,11 +152,11 @@ class PluginManager:
 
             if pl.get("use_whitelist", False):
                 if title not in pl.get("whitelist", []):
-                    logger.info('Not loading plugin module "{}": plugin not whitelisted'.format(title))
+                    logger.info('Not loading plugin module "%s": plugin not whitelisted', title)
                     return
             else:
                 if title in pl.get("blacklist", []):
-                    logger.info('Not loading plugin module "{}": plugin blacklisted'.format(title))
+                    logger.info('Not loading plugin module "%s": plugin blacklisted', title)
                     return
 
         # make sure to unload the previously loaded plugin from this path, if it was loaded.
@@ -172,7 +170,7 @@ class PluginManager:
             if hasattr(plugin_module, "_cloudbot_loaded"):
                 importlib.reload(plugin_module)
         except Exception:
-            logger.exception("Error loading {}:".format(title))
+            logger.exception("Error loading %s:", title)
             return
 
         # create the plugin
@@ -187,7 +185,7 @@ class PluginManager:
         for on_start_hook in plugin.hooks["on_start"]:
             success = await self.launch(on_start_hook, Event(bot=self.bot, hook=on_start_hook))
             if not success:
-                logger.warning("Not registering hooks from plugin {}: on_start hook errored".format(plugin.title))
+                logger.warning("Not registering hooks from plugin %s: on_start hook errored", plugin.title)
 
                 # unregister databases
                 plugin.unregister_tables(self.bot)
@@ -216,8 +214,10 @@ class PluginManager:
             for alias in command_hook.aliases:
                 if alias in self.commands:
                     logger.warning(
-                        "Plugin {} attempted to register command {} which was already registered by {}. "
-                        "Ignoring new assignment.".format(plugin.title, alias, self.commands[alias].plugin.title))
+                        "Plugin %s attempted to register command %s which was "
+                        "already registered by %s. Ignoring new assignment.",
+                        plugin.title, alias, self.commands[alias].plugin.title
+                    )
                 else:
                     self.commands[alias] = command_hook
             self._log_hook(command_hook)
@@ -393,7 +393,7 @@ class PluginManager:
         del self.plugins[plugin.file_path]
 
         if self.bot.config.get("logging", {}).get("show_plugin_loading", True):
-            logger.info("Unloaded all plugins from {}".format(plugin.title))
+            logger.info("Unloaded all plugins from %s", plugin.title)
 
         return True
 
@@ -404,8 +404,8 @@ class PluginManager:
         :type hook: Hook
         """
         if self.bot.config.get("logging", {}).get("show_plugin_loading", True):
-            logger.info("Loaded {}".format(hook))
-            logger.debug("Loaded {}".format(repr(hook)))
+            logger.info("Loaded %s", hook)
+            logger.debug("Loaded %r", hook)
 
     def _execute_hook_threaded(self, hook, event):
         """
@@ -436,7 +436,8 @@ class PluginManager:
         Launches a hook with the data from [event]
         :param hook: The hook to launch
         :param event: The event providing data for the hook
-        :return: a tuple of (ok, result) where ok is a boolean that determines if the hook ran without error and result is the result from the hook
+        :return: a tuple of (ok, result) where ok is a boolean that determines if the hook ran without error and result
+            is the result from the hook
         """
         if hook.threaded:
             coro = self.bot.loop.run_in_executor(None, self._execute_hook_threaded, hook, event)
@@ -449,7 +450,7 @@ class PluginManager:
             out = await task
             ok = True
         except Exception:
-            logger.exception("Error in hook {}".format(hook.description))
+            logger.exception("Error in hook %s", hook.description)
             ok = False
             out = sys.exc_info()
 
@@ -503,7 +504,7 @@ class PluginManager:
         try:
             result = await task
         except Exception:
-            logger.exception("Error running sieve {} on {}:".format(sieve.description, hook.description))
+            logger.exception("Error running sieve %s on %s:", sieve.description, hook.description)
             error = sys.exc_info()
 
         sieve.plugin.tasks.remove(task)
@@ -624,7 +625,7 @@ class Plugin:
         if self.tables:
             # if there are any tables
 
-            logger.info("Registering tables for {}".format(self.title))
+            logger.info("Registering tables for %s", self.title)
 
             for table in self.tables:
                 if not (await bot.loop.run_in_executor(None, table.exists, bot.db_engine)):
@@ -637,7 +638,7 @@ class Plugin:
         """
         if self.tables:
             # if there are any tables
-            logger.info("Unregistering tables for {}".format(self.title))
+            logger.info("Unregistering tables for %s", self.title)
 
             for table in self.tables:
                 bot.db_metadata.remove(table)
@@ -672,14 +673,6 @@ class Hook:
 
         # don't process args starting with "_"
         self.required_args = [arg for arg in sig.parameters.keys() if not arg.startswith('_')]
-        if sys.version_info < (3, 7, 0):
-            if "async" in self.required_args:
-                logger.warning("Use of deprecated function 'async' in %s", self.description)
-                time.sleep(1)
-                warnings.warn(
-                    "event.async() is deprecated, use event.async_call() instead.",
-                    DeprecationWarning, stacklevel=2
-                )
 
         if asyncio.iscoroutine(self.function) or asyncio.iscoroutinefunction(self.function):
             self.threaded = False
@@ -700,7 +693,7 @@ class Hook:
 
         if func_hook.kwargs:
             # we should have popped all the args, so warn if there are any left
-            logger.warning("Ignoring extra args {} from {}".format(func_hook.kwargs, self.description))
+            logger.warning("Ignoring extra args %s from %s", func_hook.kwargs, self.description)
 
     @property
     def description(self):

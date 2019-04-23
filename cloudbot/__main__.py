@@ -11,9 +11,9 @@ original_wd = Path().resolve()
 
 # set up environment - we need to make sure we are in the install directory
 path0 = Path(sys.path[0] or '.').resolve()
-install_dir = Path(__file__).resolve().parent
+install_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(install_dir))
-os.chdir(str(install_dir.parent))
+os.chdir(str(install_dir))
 
 # import bot
 from cloudbot.bot import CloudBot
@@ -50,7 +50,7 @@ def main():
         else:
             async_util.run_coroutine_threadsafe(_bot.stop("Killed (Received SIGINT {})".format(signum)), _bot.loop)
 
-        logger.warning("Bot received Signal Interrupt ({})".format(signum))
+        logger.warning("Bot received Signal Interrupt (%s)", signum)
 
         # restore the original handler so if they do it again it triggers
         signal.signal(signal.SIGINT, original_sigint)
@@ -75,13 +75,13 @@ def main():
             os.chdir(str(original_wd))
             args = sys.argv
             logger.info("Restarting Bot")
-            logger.debug("Restart arguments: {}".format(args))
+            logger.debug("Restart arguments: %s", args)
             for f in [sys.stdout, sys.stderr]:
                 f.flush()
             # close logging, and exit the program.
             logger.debug("Stopping logging engine")
             logging.shutdown()
-            os.execv(sys.executable, [sys.executable] + args)
+            os.execv(sys.executable, [sys.executable] + args)  # nosec
 
     # close logging, and exit the program.
     logger.debug("Stopping logging engine")

@@ -23,14 +23,6 @@ from cloudbot.plugin import PluginManager
 from cloudbot.reloader import PluginReloader, ConfigReloader
 from cloudbot.util import database, formatting, async_util
 
-try:
-    from cloudbot.web.main import WebInterface
-
-    web_installed = True
-except ImportError:
-    WebInterface = None
-    web_installed = False
-
 logger = logging.getLogger("cloudbot")
 
 
@@ -157,10 +149,6 @@ class CloudBot:
         self.db_metadata = database.metadata
         self.db_base = declarative_base(metadata=self.db_metadata, bind=self.db_engine)
 
-        # create web interface
-        if self.config.get("web", {}).get("enabled", False) and web_installed:
-            self.web = WebInterface(self)
-
         # set botvars so plugins can access when loading
         database.base = self.db_base
 
@@ -213,8 +201,10 @@ class CloudBot:
             nick = config['nick']
             _type = config.get("type", "irc")
 
-            self.connections[name] = self.get_client(_type)(self, name, nick, config=config, channels=config['channels'])
-            logger.debug("[{}] Created connection.".format(name))
+            self.connections[name] = self.get_client(_type)(
+                self, name, nick, config=config, channels=config['channels']
+            )
+            logger.debug("[%s] Created connection.", name)
 
     async def stop(self, reason=None, *, restart=False):
         """quits all networks and shuts the bot down"""
@@ -239,7 +229,7 @@ class CloudBot:
             if not connection.connected:
                 # Don't quit a connection that hasn't connected
                 continue
-            logger.debug("[{}] Closing connection.".format(connection.name))
+            logger.debug("[%s] Closing connection.", connection.name)
 
             connection.quit(reason)
 
@@ -288,10 +278,6 @@ class CloudBot:
         # Connect to servers
         await asyncio.gather(*[conn.try_connect() for conn in self.connections.values()], loop=self.loop)
         logger.debug("Connections created.")
-
-        # Activate web interface.
-        if self.config.get("web", {}).get("enabled", False) and web_installed:
-            self.web.start()
 
         # Run a manual garbage collection cycle, to clean up any unused objects created during initialization
         gc.collect()

@@ -2,7 +2,7 @@ from collections import defaultdict
 from datetime import datetime
 from fnmatch import fnmatch
 
-from sqlalchemy import Table, Column, String, Boolean, DateTime, PrimaryKeyConstraint
+from sqlalchemy import Table, Column, String, Boolean, DateTime, PrimaryKeyConstraint, and_, not_
 from sqlalchemy.sql import select
 
 from cloudbot import hook
@@ -13,10 +13,10 @@ from cloudbot.util.formatting import gen_markdown_table
 table = Table(
     'tells',
     database.metadata,
-    Column('connection', String(25)),
-    Column('sender', String(25)),
-    Column('target', String(25)),
-    Column('message', String(500)),
+    Column('connection', String),
+    Column('sender', String),
+    Column('target', String),
+    Column('message', String),
     Column('is_read', Boolean),
     Column('time_sent', DateTime),
     Column('time_read', DateTime)
@@ -53,7 +53,7 @@ def load_cache(db):
     :type db: sqlalchemy.orm.Session
     """
     new_cache = []
-    for row in db.execute(table.select().where(table.c.is_read == 0)):
+    for row in db.execute(table.select().where(not_(table.c.is_read))):
         conn = row["connection"]
         target = row["target"]
         new_cache.append((conn, target))
@@ -147,8 +147,10 @@ def del_disable(db, conn, target):
     :type target: str
     """
     db.execute(
-        disable_table.delete().where(disable_table.c.conn == conn.name.lower())
-            .where(disable_table.c.target == target.lower())
+        disable_table.delete().where(and_(
+            disable_table.c.conn == conn.name.lower(),
+            disable_table.c.target == target.lower()
+        ))
     )
     db.commit()
     load_disabled(db)
@@ -190,10 +192,11 @@ def del_ignore(db, conn, nick, mask):
     :type mask: str
     """
     db.execute(
-        ignore_table.delete()
-            .where(ignore_table.c.conn == conn.name.lower())
-            .where(ignore_table.c.nick == nick.lower())
-            .where(ignore_table.c.mask == mask.lower())
+        ignore_table.delete().where(and_(
+            ignore_table.c.conn == conn.name.lower(),
+            ignore_table.c.nick == nick.lower(),
+            ignore_table.c.mask == mask.lower(),
+        ))
     )
     db.commit()
     load_ignores(db)
@@ -217,7 +220,7 @@ def get_unread(db, server, target):
     query = select([table.c.sender, table.c.message, table.c.time_sent]) \
         .where(table.c.connection == server.lower()) \
         .where(table.c.target == target.lower()) \
-        .where(table.c.is_read == 0) \
+        .where(not_(table.c.is_read)) \
         .order_by(table.c.time_sent)
     return db.execute(query).fetchall()
 
@@ -226,7 +229,7 @@ def count_unread(db, server, target):
     query = select([table]) \
         .where(table.c.connection == server.lower()) \
         .where(table.c.target == target.lower()) \
-        .where(table.c.is_read == 0) \
+        .where(not_(table.c.is_read)) \
         .alias("count") \
         .count()
     return db.execute(query).fetchone()[0]
@@ -236,8 +239,8 @@ def read_all_tells(db, server, target):
     query = table.update() \
         .where(table.c.connection == server.lower()) \
         .where(table.c.target == target.lower()) \
-        .where(table.c.is_read == 0) \
-        .values(is_read=1)
+        .where(not_(table.c.is_read)) \
+        .values(is_read=True)
     db.execute(query)
     db.commit()
     load_cache(db)
@@ -248,7 +251,7 @@ def read_tell(db, server, target, message):
         .where(table.c.connection == server.lower()) \
         .where(table.c.target == target.lower()) \
         .where(table.c.message == message) \
-        .values(is_read=1)
+        .values(is_read=True)
     db.execute(query)
     db.commit()
     load_cache(db)
@@ -325,12 +328,21 @@ def showtells(nick, notice, db, conn):
 
 
 @hook.command("tell")
-def tell_cmd(text, nick, db, notice, conn, notice_doc, is_nick_valid, mask):
-    """<nick> <message> - Relay <message> to <nick> when <nick> is around."""
+def tell_cmd(text, nick, db, conn, mask, event):
+    """<nick> <message> - Relay <message> to <nick> when <nick> is around.
+
+    :type text: str
+    :type nick: str
+    :type db: sqlalchemy.orm.Session
+    :type conn: cloudbot.client.Client
+    :type mask: str
+    :type event: cloudbot.event.CommandEvent
+    :rtype: None
+    """
     query = text.split(' ', 1)
 
     if len(query) != 2:
-        notice_doc()
+        event.notice_doc()
         return
 
     target = query[0]
@@ -338,23 +350,23 @@ def tell_cmd(text, nick, db, notice, conn, notice_doc, is_nick_valid, mask):
     sender = nick
 
     if not can_send_to_user(conn, mask, target):
-        notice("You may not send a tell to that user.")
+        event.notice("You may not send a tell to that user.")
         return
 
     if target.lower() == sender.lower():
-        notice("Have you looked in a mirror lately?")
+        event.notice("Have you looked in a mirror lately?")
         return
 
-    if not is_nick_valid(target.lower()) or target.lower() == conn.nick.lower():
-        notice("Invalid nick '{}'.".format(target))
+    if not event.is_nick_valid(target.lower()) or target.lower() == conn.nick.lower():
+        event.notice("Invalid nick '{}'.".format(target))
         return
 
     if count_unread(db, conn.name, target.lower()) >= 10:
-        notice("Sorry, {} has too many messages queued already.".format(target))
+        event.notice("Sorry, {} has too many messages queued already.".format(target))
         return
 
     add_tell(db, conn.name, sender, target.lower(), message)
-    notice("Your message has been saved, and {} will be notified once they are active.".format(target))
+    event.notice("Your message has been saved, and {} will be notified once they are active.".format(target))
 
 
 def check_permissions(event, *perms):

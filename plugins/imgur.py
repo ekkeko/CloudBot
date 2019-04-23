@@ -33,6 +33,7 @@ def make_api():
 
     return ImgurClient(client_id, client_secret)
 
+
 @hook.on_start
 def set_api():
     container.api = make_api()
@@ -135,7 +136,7 @@ def imguralbum(text, conn):
     if text == "apicredits":
         return container.api.credits
 
-    items, is_reddit = get_items(text)
+    items, _ = get_items(text)
 
     if not items:
         return "No results found."

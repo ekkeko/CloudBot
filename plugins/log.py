@@ -1,4 +1,5 @@
 import codecs
+import logging
 import os
 import time
 
@@ -6,6 +7,8 @@ import cloudbot
 from cloudbot import hook
 from cloudbot.event import EventType
 from cloudbot.util.formatting import strip_colors
+
+logger = logging.getLogger("cloudbot")
 
 # +---------+
 # | Formats |
@@ -35,6 +38,10 @@ ctcp_known_with_message = ("[{server}:{channel}] {nick} [{user}@{host}] "
 ctcp_unknown = "[{server}:{channel}] {nick} [{user}@{host}] has requested unknown CTCP {ctcp_command}"
 ctcp_unknown_with_message = ("[{server}:{channel}] {nick} [{user}@{host}] "
                              "has requested unknown CTCP {ctcp_command}: {ctcp_message}")
+
+server_info_numerics = (
+    "003", "005", "250", "251", "252", "253", "254", "255", "256"
+)
 
 
 # +------------+
@@ -116,8 +123,7 @@ def format_irc_event(event, args):
     if not logging_config.get("show_motd", True) and event.irc_command in ("375", "372", "376"):
         return None
 
-    if not logging_config.get("show_server_info", True) and event.irc_command in (
-        "003", "005", "250", "251", "252", "253", "254", "255", "256"):
+    if not logging_config.get("show_server_info", True) and event.irc_command in server_info_numerics:
         return None
 
     if event.irc_command == "PING":
@@ -242,23 +248,24 @@ async def console_log(bot, event):
     """
     text = format_event(event)
     if text is not None:
-        bot.logger.info(text)
+        logger.info(text)
 
 
 @hook.command("flushlog", permissions=["botcontrol"])
 def flush_log():
-    for name, stream in stream_cache.values():
+    """- Flush all log streams"""
+    for _, stream in stream_cache.values():
         stream.flush()
-    for name, stream in raw_cache.values():
+    for _, stream in raw_cache.values():
         stream.flush()
 
 
 @hook.on_stop
 def close_logs():
-    for name, stream in stream_cache.values():
+    for _, stream in stream_cache.values():
         stream.flush()
         stream.close()
 
-    for name, stream in raw_cache.values():
+    for _, stream in raw_cache.values():
         stream.flush()
         stream.close()

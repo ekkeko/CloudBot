@@ -1,3 +1,5 @@
+import logging
+
 from sqlalchemy import Table, Column, UniqueConstraint, String
 
 from cloudbot import hook
@@ -17,6 +19,7 @@ table = Table(
 # If False, all channels without a setting will have regex disabled
 default_enabled = True
 status_cache = {}
+logger = logging.getLogger("cloudbot")
 
 
 @hook.on_start()
@@ -62,9 +65,9 @@ def sieve_regex(bot, event, _hook):
     if _hook.type == "regex" and event.chan.startswith("#") and _hook.plugin.title != "factoids":
         status = status_cache.get((event.conn.name, event.chan))
         if status != "ENABLED" and (status == "DISABLED" or not default_enabled):
-            bot.logger.info("[{}] Denying {} from {}".format(event.conn.name, _hook.function_name, event.chan))
+            logger.info("[%s] Denying %s from %s", event.conn.name, _hook.function_name, event.chan)
             return None
-        bot.logger.info("[{}] Allowing {} to {}".format(event.conn.name, _hook.function_name, event.chan))
+        logger.info("[%s] Allowing %s to %s", event.conn.name, _hook.function_name, event.chan)
 
     return event
 
@@ -92,16 +95,19 @@ def change_status(text, chan, nick, db, conn, message, notice, status):
 
 @hook.command(autohelp=False, permissions=["botcontrol"])
 def enableregex(text, db, conn, chan, nick, message, notice):
+    """[chan] - Enable regex hooks in [chan] (default: current channel)"""
     return change_status(text, chan, nick, db, conn, message, notice, True)
 
 
 @hook.command(autohelp=False, permissions=["botcontrol"])
 def disableregex(text, db, conn, chan, nick, message, notice):
+    """[chan] - Disable regex hooks in [chan] (default: current channel)"""
     return change_status(text, chan, nick, db, conn, message, notice, False)
 
 
 @hook.command(autohelp=False, permissions=["botcontrol"])
 def resetregex(text, db, conn, chan, nick, message, notice):
+    """[chan] - Reset regex hook status in [chan] (default: current channel)"""
     text = text.strip().lower()
     if not text:
         channel = chan
@@ -118,6 +124,7 @@ def resetregex(text, db, conn, chan, nick, message, notice):
 
 @hook.command(autohelp=False, permissions=["botcontrol"])
 def regexstatus(text, conn, chan):
+    """[chan] - Get status of regex hooks in [chan] (default: current channel)"""
     text = text.strip().lower()
     if not text:
         channel = chan
@@ -136,6 +143,7 @@ def regexstatus(text, conn, chan):
 
 @hook.command(autohelp=False, permissions=["botcontrol"])
 def listregex(conn):
+    """- List non-default regex statuses for channels"""
     values = []
     for (conn_name, chan), status in status_cache.values():
         if conn_name != conn.name:

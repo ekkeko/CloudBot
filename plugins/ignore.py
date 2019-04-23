@@ -7,9 +7,9 @@ from cloudbot.util import database
 table = Table(
     "ignored",
     database.metadata,
-    Column("connection", String(25)),
-    Column("channel", String(25)),
-    Column("mask", String(250)),
+    Column("connection", String),
+    Column("channel", String),
+    Column("mask", String),
     Column("status", Boolean, default=True),
     UniqueConstraint("connection", "channel", "mask", "status"),
     PrimaryKeyConstraint("connection", "channel", "mask")
@@ -110,7 +110,7 @@ def get_user(conn, text):
 
 @hook.command(permissions=["ignore", "chanop"])
 def ignore(text, db, chan, conn, notice, admin_log, nick):
-    """<nick|mask> -- ignores all input from <nick|mask> in this channel."""
+    """<nick|mask> - ignores all input from <nick|mask> in this channel."""
     target = get_user(conn, text)
 
     if is_ignored(conn.name, chan, target):
@@ -123,7 +123,7 @@ def ignore(text, db, chan, conn, notice, admin_log, nick):
 
 @hook.command(permissions=["ignore", "chanop"])
 def unignore(text, db, chan, conn, notice, nick, admin_log):
-    """<nick|mask> -- un-ignores all input from <nick|mask> in this channel."""
+    """<nick|mask> - un-ignores all input from <nick|mask> in this channel."""
     target = get_user(conn, text)
 
     if not is_ignored(conn.name, chan, target):
@@ -136,7 +136,7 @@ def unignore(text, db, chan, conn, notice, nick, admin_log):
 
 @hook.command(permissions=["botcontrol"])
 def global_ignore(text, db, conn, notice, nick, admin_log):
-    """<nick|mask> -- ignores all input from <nick|mask> in ALL channels."""
+    """<nick|mask> - ignores all input from <nick|mask> in ALL channels."""
     target = get_user(conn, text)
 
     if is_ignored(conn.name, "*", target):
@@ -149,7 +149,7 @@ def global_ignore(text, db, conn, notice, nick, admin_log):
 
 @hook.command(permissions=["botcontrol"])
 def global_unignore(text, db, conn, notice, nick, admin_log):
-    """<nick|mask> -- un-ignores all input from <nick|mask> in ALL channels."""
+    """<nick|mask> - un-ignores all input from <nick|mask> in ALL channels."""
     target = get_user(conn, text)
 
     if not is_ignored(conn.name, "*", target):

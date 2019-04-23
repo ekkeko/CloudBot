@@ -9,6 +9,8 @@ from collections import OrderedDict
 from numbers import Number
 from pathlib import Path
 
+import pytest
+
 import cloudbot.bot
 from cloudbot.event import Event, CommandEvent, RegexEvent, CapEvent, PostHookEvent, IrcOutEvent
 from cloudbot.hook import Action
@@ -16,13 +18,13 @@ from cloudbot.plugin import Plugin, Hook
 
 Hook.original_init = Hook.__init__
 
-DOC_RE = re.compile(r"^(?:(?:<.+?>|{.+?}|\[.+?\]).+?)*?-\s.+$")
+DOC_RE = re.compile(r"^(?:[<{\[][^-]+?[>}\]][^-]+?)*?-\s.+$")
 PLUGINS = []
 
 
 class MockConfig(OrderedDict):
     def get_api_key(self, name, default=None):  # pylint: disable=locally-disabled, no-self-use, unused-argument
-        return default
+        return default  # pragma: no cover
 
 
 class MockBot:
@@ -72,7 +74,7 @@ def get_plugins():
 
 
 def pytest_generate_tests(metafunc):
-    if 'plugin' in metafunc.fixturenames:
+    if 'plugin' in metafunc.fixturenames:  # pragma: no cover
         plugins = get_plugins()
         metafunc.parametrize('plugin', plugins, ids=[plugin.title for plugin in plugins])
     elif 'hook' in metafunc.fixturenames:
@@ -99,6 +101,26 @@ HOOK_ATTR_TYPES = {
 }
 
 
+@pytest.mark.parametrize('text', [
+    '- Foo',
+    '<text> - Uses <text>',
+    '[text] - Thing with [text]',
+])
+def test_doc_re_matches(text):
+    assert DOC_RE.match(text)
+
+
+@pytest.mark.parametrize('text', [
+    '-- Foo',
+    '<text> -- Uses <text>',
+    '<text - Uses text>',
+    'Foobar',
+    '-Baz',
+])
+def test_doc_re_no_match(text):
+    assert not DOC_RE.match(text)
+
+
 def test_hook_kwargs(hook):
     assert not hook.func_hook.kwargs, \
         "Unknown arguments '{}' passed during registration of hook '{}'".format(
@@ -116,7 +138,9 @@ def test_hook_kwargs(hook):
 
 
 def test_hook_doc(hook):
-    if hook.type == "command" and hook.doc:
+    if hook.type == "command":
+        assert hook.doc
+
         assert DOC_RE.match(hook.doc), \
             "Invalid docstring '{}' format for command hook".format(hook.doc)
 
@@ -130,8 +154,6 @@ def test_hook_doc(hook):
 
 
 def test_hook_args(hook):
-    assert 'async' not in hook.required_args, "Use of deprecated function Event.async"
-
     bot = MockBot()
     if hook.type in ("irc_raw", "perm_check", "periodic", "on_start", "on_stop", "event", "on_connect"):
         event = Event(bot=bot)
@@ -147,7 +169,7 @@ def test_hook_args(hook):
         event = IrcOutEvent(bot=bot)
     elif hook.type == "sieve":
         return
-    else:
+    else:  # pragma: no cover
         assert False, "Unhandled hook type '{}' in tests".format(hook.type)
 
     for arg in hook.required_args:
@@ -155,6 +177,7 @@ def test_hook_args(hook):
 
 
 def test_coroutine_hooks(hook):
-    if inspect.isgeneratorfunction(hook.function):
+    if inspect.isgeneratorfunction(hook.function):  # pragma: no cover
         assert asyncio.iscoroutinefunction(hook.function), \
-            "Non-coroutine generator function used for a hook. This is most liekly due to incorrect ordering of the hook/coroutine decorators."
+            "Non-coroutine generator function used for a hook. This is most liekly due to incorrect ordering of the " \
+            "hook/coroutine decorators."
