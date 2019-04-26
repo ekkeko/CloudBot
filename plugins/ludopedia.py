@@ -9,7 +9,7 @@ from urllib.parse import quote
 
 
 @hook.command("ludopedia")
-def sonhos(text):
+def ludopedia(text):
     """ludopedia <board game name> -- Looks up <board game name> on https://ludopedia.com.br."""
 
     if text:
