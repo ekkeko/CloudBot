@@ -42,23 +42,41 @@ def sonhos(text):
         if definitions:
             try:
                 definition = definitions[id_num - 1]
-                def_text = sanitize(definition)
             except IndexError:
                 return 'Não encontrado.'
+            
+            def_found = re.findall("Significado Sonhar com (.+?)<p>", definition, re.DOTALL)
+            if len(def_found) == 0: 
+                def_found = re.findall("Significado de sonhar com (.+?)\.", definition, re.DOTALL)
+
+            if len(def_found) == 0: 
+                def_found = re.findall("<p><p><strong>Sonhar com (.+?)</strong>", definition, re.DOTALL)
+
+            if len(def_found) == 0: 
+                def_found = text.capitalize().strip()
+            else:
+                def_found = def_found[0].capitalize().strip()
+
+            def_text = sanitize(definition)
 
             short_url = web.try_shorten(url)
             
-            output = "[{}/{}] {} - {}".format(id_num, len(definitions), def_text, short_url)
+            output = "[{}/{}] \x02{}\x02: {} - {}".format(id_num, len(definitions), def_found, def_text, short_url)
         else:
             output = 'Não achei nada com o termo \x02' + text + '\x02.'
 
         return output
 
 def sanitize(definition):
-    def_text = re.sub("<strong>|</strong>","\x02", definition)
+    def_text = re.sub("<p><p><strong>Sonhar com .+?</strong>", "", definition, flags=re.DOTALL)
+    def_text = re.sub("Significado de sonhar com .+?\.", "", def_text)
+    def_text = re.sub("Significado Sonhar com .+?<p>", "", def_text)
+    def_text = re.sub("<script .+?</script>", "", def_text, flags=re.DOTALL)
+    def_text = re.sub("<.*?>"," ", def_text, flags=re.DOTALL)
     def_text = re.sub("<br />|<br>"," ", def_text)
-    def_text = re.sub("<.*?>"," ", def_text)
+    def_text = re.sub("\s+?,", ",", def_text)
     def_text = re.sub("\s+"," ", def_text)
+    def_text = re.sub("&nbsp;"," ", def_text)
     l = def_text.splitlines()
     n = [item.strip() for item in l]
     def_text = " ".join(n).strip()
